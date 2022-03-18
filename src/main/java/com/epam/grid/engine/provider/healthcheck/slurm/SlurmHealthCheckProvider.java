@@ -32,7 +32,7 @@ import org.thymeleaf.context.Context;
 
 /**
  * Provider class that addressing a request
- * to the Sun Grid Engine and processes the response received.
+ * to the SLURM Grid Engine and processes the response received.
  */
 @Service
 public class SlurmHealthCheckProvider implements HealthCheckProvider {
@@ -82,7 +82,7 @@ public class SlurmHealthCheckProvider implements HealthCheckProvider {
 
     private String[] getSinfoCommand() {
         final Context context = new Context();
-        context.setVariable("ctldPort", ctldPort);
+//        context.setVariable("ctldPort", ctldPort);
         return commandCompiler.compileCommand(getProviderType(), SINFO_COMMAND, context);
     }
 

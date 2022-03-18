@@ -29,32 +29,33 @@ import lombok.NoArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.http.HttpStatus;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
+import static java.util.stream.Collectors.joining;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SinfoCommandParser {
 
-    private static final String NOT_PROVIDED_STATUS_PREFIX = "9";
     private static final String STATUS = "AVAIL";
-    private static final String SGE_INFO = "info:";
-    private static final String START_TIME = "start time: ";
-    private static final String INSIDE_BRACKETS_REGEX = "\\(.*\\)";
     private static final String CANT_FIND_CONNECTION = "can't find connection";
     private static final String CANT_FIND_CONNECTION_MESSAGE = "Can`t find connection via specified port";
     private static final String DATE_FORMAT_CHECK_TIME = "MM/dd/yyyy HH:mm:ss:";
     private static final String DATE_FORMAT_START_TIME = "MM/dd/yyyy HH:mm:ss";
-    private static final String DOUBLED_SPACES_REGEX = "\\s+";
     private static final Long NOT_PROVIDED = 99999L;
 
     public static HealthCheckInfo parseSinfoResult(final CommandResult commandResult) {
         validateSinfoResponse(commandResult);
-        final List<String> stdOut = commandResult.getStdOut();
+        final Map<String, String> stdOut = getResponse(commandResult.getStdOut());
         final StatusInfo statusInfo = parseStatusInfo(stdOut);
         return HealthCheckInfo.builder()
                 .statusInfo(statusInfo)
@@ -64,7 +65,7 @@ public class SinfoCommandParser {
     }
 
     private static void validateSinfoResponse(final CommandResult commandResult) {
-        if (CollectionUtils.isEmpty(commandResult.getStdOut())) {
+        if (CollectionUtils.isEmpty(commandResult.getStdOut()) || commandResult.getStdOut().size() < 2) {
             throw new GridEngineException(HttpStatus.NOT_FOUND,
                     String.format("SLURM error during health check. %nexitCode = %d %nstdOut: %s %nstdErr: %s",
                             commandResult.getExitCode(), commandResult.getStdOut(), commandResult.getStdErr())
@@ -81,7 +82,7 @@ public class SinfoCommandParser {
                 && !commandResult.getStdErr().isEmpty();
     }
 
-    private static StatusInfo parseStatusInfo(final List<String> stdOut) {
+    private static StatusInfo parseStatusInfo(final Map<String, String> stdOut) {
         final long statusCode = parseStatusCode(stdOut);
         return StatusInfo.builder()
                 .code(statusCode)
@@ -90,13 +91,18 @@ public class SinfoCommandParser {
                 .build();
     }
 
-    private static long parseStatusCode(final List<String> stdOut) {
-        return stdOut.stream().filter(out -> out.contains(STATUS)).findAny()
-                .map(statusString -> statusString.substring(statusString.length() - 1))
-                .map(statusString -> NOT_PROVIDED_STATUS_PREFIX.equals(statusString)
-                        ? NOT_PROVIDED : Long.parseLong(statusString))
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "stdOut does not contains status information, stdOt: " + stdOut));
+    private static long parseStatusCode(final Map<String, String> stdOut) {
+        final String status=stdOut.get(STATUS);
+        long statusCode = NOT_PROVIDED;
+        switch (status) {
+            case "up":
+                statusCode = 0L;
+                break;
+            case "down":
+                statusCode = 2L;
+                break;
+        }
+        return statusCode;
     }
 
     private static GridEngineStatus parseStatus(final long status) {
@@ -105,29 +111,22 @@ public class SinfoCommandParser {
                         "Not valid status value provided: " + status));
     }
 
-    private static String parseInfo(final List<String> stdOut) {
-        return stdOut.stream().filter(out -> out.contains(SGE_INFO)).findAny()
-                .map(infoString -> infoString.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
-                .map(infoString -> infoString.replace(SGE_INFO, EMPTY_STRING))
-                .map(String::trim)
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "stdOut does not contains info, stdOut: " + stdOut));
+    private static String parseInfo(final Map<String, String> stdOut) {
+        return stdOut.entrySet()
+                .stream()
+                .map(Object::toString)
+                .collect(joining(" "));
     }
 
-    private static LocalDateTime parseCheckTime(final List<String> stdOut) {
+    private static LocalDateTime parseCheckTime(final Map<String, String> stdOut) {
         final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT_CHECK_TIME);
-        return tryParseStringToLocalDateTime(stdOut.get(0), formatter);
+        return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_CHECK_TIME).format(new Date()),
+                formatter);
     }
 
-    private static LocalDateTime parseStartTime(final List<String> stdOut) {
-        return stdOut.stream().filter(out -> out.contains(START_TIME)).findAny()
-                .map(start -> start.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
-                .map(start -> start.replace(START_TIME, EMPTY_STRING))
-                .map(start -> start.replaceAll(INSIDE_BRACKETS_REGEX, EMPTY_STRING))
-                .map(String::trim)
-                .map(start -> tryParseStringToLocalDateTime(start, DateTimeFormatter.ofPattern(DATE_FORMAT_START_TIME)))
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "stdOut does not contains start time, stdOut: " + stdOut));
+    private static LocalDateTime parseStartTime(final Map<String, String> stdOut) {
+        return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_START_TIME).format(new Date()),
+                DateTimeFormatter.ofPattern(DATE_FORMAT_START_TIME));
     }
 
     private static LocalDateTime tryParseStringToLocalDateTime(
@@ -142,17 +141,23 @@ public class SinfoCommandParser {
         }
     }
 
-    private static long convertStatus(final String status){
-        long statusCode=99999L;
-        switch (status){
-            case "up":
-                statusCode=0L;
-                break;
-            case "down":
-                statusCode=2L;
-                break;
+    private static Map<String, String> getResponse(final List<String> response) {
+        Map<String, String> mapResponse = null;
+        if (response.size() > 1) {
+            List<String> keys = Arrays.stream(response.get(0).replaceAll("\\\\s+", " ").split(SPACE))
+                    .filter(s->s.length()>0)
+                    .collect(Collectors.toList());
+            List<String> values = Arrays.stream(response.get(1).replaceAll("\\\\s+", " ").split(SPACE))
+                    .filter(s->s.length()>0)
+                    .collect(Collectors.toList());
+            mapResponse = IntStream.range(0, keys.size())
+                    .boxed()
+                    .collect(Collectors.toMap(keys::get, values::get));
         }
-        return statusCode;
+        else{
+            throw new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR, "Server response is empty or incomplete");
+        }
+        return mapResponse;
     }
 
 }
