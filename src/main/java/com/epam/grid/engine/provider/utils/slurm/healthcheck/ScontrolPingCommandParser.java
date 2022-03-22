@@ -124,12 +124,12 @@ public class ScontrolPingCommandParser {
     private static LocalDateTime getCheckTime() {
         final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT_CHECK_TIME);
         return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_CHECK_TIME)
-                        .format(new Date(0)),
+                        .format(new Date()),
                 formatter);
     }
 
     private static LocalDateTime getStartTime() {
-        return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_START_TIME).format(new Date()),
+        return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_START_TIME).format(new Date(0)),
                 DateTimeFormatter.ofPattern(DATE_FORMAT_START_TIME));
     }
 
