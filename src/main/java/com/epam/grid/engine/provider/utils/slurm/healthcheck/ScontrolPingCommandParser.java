@@ -33,41 +33,39 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
-import static java.util.stream.Collectors.joining;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class SinfoCommandParser {
+public class ScontrolPingCommandParser {
 
-    private static final String STATUS = "AVAIL";
+    private static final String UP_STATE = "UP";
+    private static final String DOWN_STATE = "DOWN";
+
     private static final String CANT_FIND_CONNECTION = "can't find connection";
     private static final String CANT_FIND_CONNECTION_MESSAGE = "Can`t find connection via specified port";
     private static final String DATE_FORMAT_CHECK_TIME = "MM/dd/yyyy HH:mm:ss:";
     private static final String DATE_FORMAT_START_TIME = "MM/dd/yyyy HH:mm:ss";
     private static final Long NOT_PROVIDED = 99999L;
+    private static final String DOUBLED_SPACES_REGEX = "\\s+";
 
-    public static HealthCheckInfo parseSinfoResult(final CommandResult commandResult) {
-        validateSinfoResponse(commandResult);
-        final Map<String, String> stdOut = getResponse(commandResult.getStdOut());
+    public static HealthCheckInfo parseScontrolPingResult(final CommandResult commandResult) {
+        validateScontrolPingResponse(commandResult);
+        final List<String> stdOut = commandResult.getStdOut();
         final StatusInfo statusInfo = parseStatusInfo(stdOut);
         return HealthCheckInfo.builder()
                 .statusInfo(statusInfo)
-                .checkTime(parseCheckTime(stdOut))
-                .startTime(parseStartTime(stdOut))
+                .startTime(getStartTime())
+                .checkTime(getCheckTime())
                 .build();
     }
 
-    private static void validateSinfoResponse(final CommandResult commandResult) {
-        if (CollectionUtils.isEmpty(commandResult.getStdOut()) || commandResult.getStdOut().size() < 2) {
+    private static void validateScontrolPingResponse(final CommandResult commandResult) {
+        if (CollectionUtils.isEmpty(commandResult.getStdOut())) {
             throw new GridEngineException(HttpStatus.NOT_FOUND,
-                    String.format("SLURM error during health check. %nexitCode = %d %nstdOut: %s %nstdErr: %s",
+                    String.format("Slurm error during health check. %nexitCode = %d %nstdOut: %s %nstdErr: %s",
                             commandResult.getExitCode(), commandResult.getStdOut(), commandResult.getStdErr())
             );
         }
@@ -82,7 +80,7 @@ public class SinfoCommandParser {
                 && !commandResult.getStdErr().isEmpty();
     }
 
-    private static StatusInfo parseStatusInfo(final Map<String, String> stdOut) {
+    private static StatusInfo parseStatusInfo(final List<String> stdOut) {
         final long statusCode = parseStatusCode(stdOut);
         return StatusInfo.builder()
                 .code(statusCode)
@@ -91,17 +89,21 @@ public class SinfoCommandParser {
                 .build();
     }
 
-    private static long parseStatusCode(final Map<String, String> stdOut) {
-        final String status=stdOut.get(STATUS);
+    private static long parseStatusCode(final List<String> stdOut) {
         long statusCode = NOT_PROVIDED;
-        switch (status) {
-            case "up":
-                statusCode = 0L;
-                break;
-            case "down":
-                statusCode = 2L;
-                break;
+        final List<String> statusString = List.of(stdOut.get(0).replaceAll(DOUBLED_SPACES_REGEX, SPACE).split(SPACE));
+        if (statusString.size() > 0) {
+            final String status = statusString.get(statusString.size() - 1);
+            switch (status) {
+                case UP_STATE:
+                    statusCode = 0L;
+                    break;
+                case DOWN_STATE:
+                    statusCode = 2L;
+                    break;
+            }
         }
+
         return statusCode;
     }
 
@@ -111,20 +113,22 @@ public class SinfoCommandParser {
                         "Not valid status value provided: " + status));
     }
 
-    private static String parseInfo(final Map<String, String> stdOut) {
-        return stdOut.entrySet()
-                .stream()
-                .map(Object::toString)
-                .collect(joining(" "));
+    private static String parseInfo(final List<String> stdOut) {
+        return stdOut.stream().filter(out -> out.contains(UP_STATE) || out.contains(DOWN_STATE)).findAny()
+                .map(infoString -> infoString.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
+                .map(String::trim)
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "unable to find server status in stdOut, stdOut: " + stdOut));
     }
 
-    private static LocalDateTime parseCheckTime(final Map<String, String> stdOut) {
+    private static LocalDateTime getCheckTime() {
         final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT_CHECK_TIME);
-        return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_CHECK_TIME).format(new Date()),
+        return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_CHECK_TIME)
+                        .format(new Date(0)),
                 formatter);
     }
 
-    private static LocalDateTime parseStartTime(final Map<String, String> stdOut) {
+    private static LocalDateTime getStartTime() {
         return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_START_TIME).format(new Date()),
                 DateTimeFormatter.ofPattern(DATE_FORMAT_START_TIME));
     }
@@ -139,25 +143,6 @@ public class SinfoCommandParser {
             throw new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR, "Error during date parsing",
                     dateTimeParseException);
         }
-    }
-
-    private static Map<String, String> getResponse(final List<String> response) {
-        Map<String, String> mapResponse = null;
-        if (response.size() > 1) {
-            List<String> keys = Arrays.stream(response.get(0).replaceAll("\\\\s+", " ").split(SPACE))
-                    .filter(s->s.length()>0)
-                    .collect(Collectors.toList());
-            List<String> values = Arrays.stream(response.get(1).replaceAll("\\\\s+", " ").split(SPACE))
-                    .filter(s->s.length()>0)
-                    .collect(Collectors.toList());
-            mapResponse = IntStream.range(0, keys.size())
-                    .boxed()
-                    .collect(Collectors.toMap(keys::get, values::get));
-        }
-        else{
-            throw new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR, "Server response is empty or incomplete");
-        }
-        return mapResponse;
     }
 
 }
