@@ -1,1 +1,1 @@
-scontrol ping
+scontrol show config

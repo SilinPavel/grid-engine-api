@@ -25,7 +25,7 @@ import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
-import com.epam.grid.engine.provider.utils.slurm.healthcheck.ScontrolPingCommandParser;
+import com.epam.grid.engine.provider.utils.slurm.healthcheck.ShowConfigCommandParser;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
@@ -37,7 +37,7 @@ import org.thymeleaf.context.Context;
 @Service
 public class SlurmHealthCheckProvider implements HealthCheckProvider {
 
-    private static final String SCONTROLPING_COMMAND = "scontrolPing";
+    private static final String SHOWCONFIG_COMMAND = "showConfig";
 
     private final String ctldPort;
     private final SimpleCmdExecutor simpleCmdExecutor;
@@ -72,17 +72,17 @@ public class SlurmHealthCheckProvider implements HealthCheckProvider {
      */
     @Override
     public HealthCheckInfo checkHealth() {
-        return executeScontrolPingCommand();
+        return executeShowConfigCommand();
     }
 
-    private HealthCheckInfo executeScontrolPingCommand() {
-        final CommandResult result = simpleCmdExecutor.execute(getScontrolPingCommand());
-        return ScontrolPingCommandParser.parseScontrolPingResult(result);
+    private HealthCheckInfo executeShowConfigCommand() {
+        final CommandResult result = simpleCmdExecutor.execute(getShowConfigCommand());
+        return ShowConfigCommandParser.parseShowConfigResult(result);
     }
 
-    private String[] getScontrolPingCommand() {
+    private String[] getShowConfigCommand() {
         final Context context = new Context();
-        return commandCompiler.compileCommand(getProviderType(), SCONTROLPING_COMMAND, context);
+        return commandCompiler.compileCommand(getProviderType(), SHOWCONFIG_COMMAND, context);
     }
 
 }
