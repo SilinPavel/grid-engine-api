@@ -26,7 +26,6 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
 import com.epam.grid.engine.provider.utils.slurm.healthcheck.ShowConfigCommandParser;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 

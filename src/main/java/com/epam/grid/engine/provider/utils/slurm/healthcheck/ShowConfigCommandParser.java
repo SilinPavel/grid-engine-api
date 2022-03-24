@@ -92,20 +92,22 @@ public class ShowConfigCommandParser {
     }
 
     private static long parseStatusCode(final List<String> stdOut) {
-        long statusCode = NOT_PROVIDED;
-        final List<String> statusString = List.of(stdOut.get(stdOut.size()-1).replaceAll(DOUBLED_SPACES_REGEX, SPACE).split(SPACE));
-        if (statusString.size() > 0) {
-            final String status = statusString.get(statusString.size() - 1);
-            switch (status) {
-                case UP_STATE:
-                    statusCode = 0L;
-                    break;
-                case DOWN_STATE:
-                    statusCode = 2L;
-                    break;
-            }
+        long statusCode;
+        final List<String> statusString = List.of(stdOut.get(stdOut.size() - 1)
+                .replaceAll(DOUBLED_SPACES_REGEX, SPACE)
+                .split(SPACE));
+        final String status = statusString.get(statusString.size() - 1);
+        switch (status) {
+            case UP_STATE:
+                statusCode = 0L;
+                break;
+            case DOWN_STATE:
+                statusCode = 2L;
+                break;
+            default:
+                statusCode = NOT_PROVIDED;
+                break;
         }
-
         return statusCode;
     }
 
@@ -116,7 +118,7 @@ public class ShowConfigCommandParser {
     }
 
     private static String parseInfo(final List<String> stdOut) {
-        return stdOut.stream().takeWhile(s->!s.equals(SPACE))
+        return stdOut.stream().takeWhile(s -> !s.equals(SPACE))
                 .map(infoString -> infoString.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
                 .map(String::trim)
                 .collect(Collectors.joining("; "));
