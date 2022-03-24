@@ -39,16 +39,13 @@ public class SlurmHealthCheckProvider implements HealthCheckProvider {
 
     private static final String SHOWCONFIG_COMMAND = "showConfig";
 
-    private final String ctldPort;
     private final SimpleCmdExecutor simpleCmdExecutor;
     private final GridEngineCommandCompiler commandCompiler;
 
     public SlurmHealthCheckProvider(
-            @Value("${slurm.slurmctld.port}") final String ctldPort,
             final SimpleCmdExecutor simpleCmdExecutor,
             final GridEngineCommandCompiler commandCompiler
     ) {
-        this.ctldPort = ctldPort;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
     }
