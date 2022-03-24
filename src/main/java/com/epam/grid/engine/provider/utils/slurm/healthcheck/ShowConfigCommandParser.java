@@ -37,7 +37,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.epam.grid.engine.utils.TextConstants.*;
+import static com.epam.grid.engine.utils.TextConstants.SPACE;
+import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
+import static com.epam.grid.engine.utils.TextConstants.EQUAL_SIGN;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ShowConfigCommandParser {
@@ -92,7 +94,7 @@ public class ShowConfigCommandParser {
     }
 
     private static long parseStatusCode(final List<String> stdOut) {
-        long statusCode;
+        final long statusCode;
         final List<String> statusString = List.of(stdOut.get(stdOut.size() - 1)
                 .replaceAll(DOUBLED_SPACES_REGEX, SPACE)
                 .split(SPACE));
