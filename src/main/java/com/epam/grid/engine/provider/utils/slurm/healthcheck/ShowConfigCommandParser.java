@@ -29,13 +29,10 @@ import lombok.NoArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.http.HttpStatus;
 
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
 import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
@@ -49,9 +46,9 @@ public class ShowConfigCommandParser {
 
     private static final String CANT_FIND_CONNECTION = "can't find connection";
     private static final String CANT_FIND_CONNECTION_MESSAGE = "Can`t find connection via specified port";
-    private static final String DATE_FORMAT_CHECK_TIME = "MM/dd/yyyy HH:mm:ss:";
-    private static final String DATE_FORMAT_START_TIME = "yyyy-MM-dd'T'HH:mm:ss";
+    private static final String SLURM_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private static final String BOOT_TIME = "BOOT_TIME";
+    private static final String CONFIGUATION_STRING = "Configuration data as of";
     private static final Long NOT_PROVIDED = 99999L;
     private static final String DOUBLED_SPACES_REGEX = "\\s+";
 
@@ -62,7 +59,7 @@ public class ShowConfigCommandParser {
         return HealthCheckInfo.builder()
                 .statusInfo(statusInfo)
                 .startTime(getStartTime(stdOut))
-                .checkTime(getCheckTime())
+                .checkTime(getCheckTime(stdOut))
                 .build();
     }
 
@@ -88,7 +85,7 @@ public class ShowConfigCommandParser {
         final long statusCode = parseStatusCode(stdOut);
         return StatusInfo.builder()
                 .code(statusCode)
-                .status(parseStatus(statusCode))
+                .status(getStatus(statusCode))
                 .info(parseInfo(stdOut))
                 .build();
     }
@@ -113,41 +110,39 @@ public class ShowConfigCommandParser {
         return statusCode;
     }
 
-    private static GridEngineStatus parseStatus(final long status) {
+    private static GridEngineStatus getStatus(final long status) {
         return GridEngineStatus.getById(status)
                 .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "Not valid status value provided: " + status));
     }
 
     private static String parseInfo(final List<String> stdOut) {
-        return stdOut.stream().takeWhile(s -> !s.equals(SPACE))
-                .map(infoString -> infoString.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
-                .map(String::trim)
-                .collect(Collectors.joining("; "));
+        return stdOut.get(stdOut.size() - 1).trim();
     }
 
-    private static LocalDateTime getCheckTime() {
-        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT_CHECK_TIME);
-        return tryParseStringToLocalDateTime(new SimpleDateFormat(DATE_FORMAT_CHECK_TIME)
-                        .format(new Date()),
-                formatter);
+    private static LocalDateTime getCheckTime(final List<String> stdOut) {
+        return stdOut.stream().filter(out -> out.contains(CONFIGUATION_STRING)).findAny()
+                .map(start -> start.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
+                .map(start -> start.replace(CONFIGUATION_STRING, EMPTY_STRING))
+                .map(String::trim)
+                .map(start -> tryParseStringToLocalDateTime(start, DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT)))
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "check time wasn't found in stdOut, stdOut: " + stdOut));
     }
 
     private static LocalDateTime getStartTime(final List<String> stdOut) {
         return stdOut.stream().filter(out -> out.contains(BOOT_TIME)).findAny()
-                .map(start -> start.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
-                .map(start -> start.replace(BOOT_TIME, EMPTY_STRING))
-                .map(start -> start.replaceAll(EQUAL_SIGN, EMPTY_STRING))
-                .map(String::trim)
-                .map(start -> tryParseStringToLocalDateTime(start, DateTimeFormatter.ofPattern(DATE_FORMAT_START_TIME)))
+                .map(bootTimeStr -> {
+                    String[] bootTimeKeyValue = bootTimeStr.split(EQUAL_SIGN);
+                    return bootTimeKeyValue.length == 2 ? bootTimeKeyValue[1].trim() : "";
+                })
+                .map(start -> tryParseStringToLocalDateTime(start, DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT)))
                 .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "boot time wasn't found in stdOut, stdOut: " + stdOut));
     }
 
-    private static LocalDateTime tryParseStringToLocalDateTime(
-            final String dateString,
-            final DateTimeFormatter formatter
-    ) {
+    private static LocalDateTime tryParseStringToLocalDateTime(final String dateString,
+                                                               final DateTimeFormatter formatter) {
         try {
             return LocalDateTime.parse(dateString, formatter);
         } catch (final DateTimeParseException dateTimeParseException) {

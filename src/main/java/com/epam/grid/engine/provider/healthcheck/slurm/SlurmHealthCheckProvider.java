@@ -21,7 +21,6 @@ package com.epam.grid.engine.provider.healthcheck.slurm;
 
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
-import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
@@ -72,13 +71,11 @@ public class SlurmHealthCheckProvider implements HealthCheckProvider {
     }
 
     private HealthCheckInfo executeShowConfigCommand() {
-        final CommandResult result = simpleCmdExecutor.execute(getShowConfigCommand());
-        return ShowConfigCommandParser.parseShowConfigResult(result);
+        return ShowConfigCommandParser.parseShowConfigResult(simpleCmdExecutor.execute(getShowConfigCommand()));
     }
 
     private String[] getShowConfigCommand() {
-        final Context context = new Context();
-        return commandCompiler.compileCommand(getProviderType(), SHOWCONFIG_COMMAND, context);
+        return commandCompiler.compileCommand(getProviderType(), SHOWCONFIG_COMMAND, new Context());
     }
 
 }
