@@ -48,9 +48,9 @@ public class ShowConfigCommandParser {
     private static final String CANT_FIND_CONNECTION_MESSAGE = "Can`t find connection via specified port";
     private static final String SLURM_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private static final String BOOT_TIME = "BOOT_TIME";
-    private static final String CONFIGUATION_STRING = "Configuration data as of";
+    private static final String CONFIGURATION_STRING = "Configuration data as of";
+    private static final String SPACES_REGEX = "\\s+";
     private static final Long NOT_PROVIDED = 99999L;
-    private static final String DOUBLED_SPACES_REGEX = "\\s+";
 
     public static HealthCheckInfo parseShowConfigResult(final CommandResult commandResult) {
         validateShowConfigResponse(commandResult);
@@ -93,7 +93,7 @@ public class ShowConfigCommandParser {
     private static long parseStatusCode(final List<String> stdOut) {
         final long statusCode;
         final List<String> statusString = List.of(stdOut.get(stdOut.size() - 1)
-                .replaceAll(DOUBLED_SPACES_REGEX, SPACE)
+                .replaceAll(SPACES_REGEX, SPACE)
                 .split(SPACE));
         final String status = statusString.get(statusString.size() - 1);
         switch (status) {
@@ -121,9 +121,9 @@ public class ShowConfigCommandParser {
     }
 
     private static LocalDateTime getCheckTime(final List<String> stdOut) {
-        return stdOut.stream().filter(out -> out.contains(CONFIGUATION_STRING)).findAny()
-                .map(start -> start.replaceAll(DOUBLED_SPACES_REGEX, SPACE))
-                .map(start -> start.replace(CONFIGUATION_STRING, EMPTY_STRING))
+        return stdOut.stream().filter(out -> out.contains(CONFIGURATION_STRING)).findAny()
+                .map(start -> start.replaceAll(SPACES_REGEX, SPACE))
+                .map(start -> start.replace(CONFIGURATION_STRING, EMPTY_STRING))
                 .map(String::trim)
                 .map(start -> tryParseStringToLocalDateTime(start, DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT)))
                 .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,

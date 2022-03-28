@@ -22,5 +22,6 @@ package com.epam.grid.engine.provider;
 import com.epam.grid.engine.entity.EngineType;
 
 public interface GridProviderAware {
+
     EngineType getProviderType();
 }
