@@ -58,13 +58,13 @@ public class HealthCheckProviderServiceTest {
     protected static class HealthCheckConfig {
 
         @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SGE")
+        @ConditionalOnProperty(name = "TARGET_GRID_ENGINE", havingValue = "SGE")
         public HealthCheckProviderService sgeHealthCheckProviderService() {
             return Mockito.spy(new HealthCheckProviderService(EngineType.SGE));
         }
 
         @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SGE")
+        @ConditionalOnProperty(name = "TARGET_GRID_ENGINE", havingValue = "SGE")
         public HealthCheckProvider sgeHealthCheckProvider() {
             return Mockito.spy(new SgeHealthCheckProvider("6444",
                     "/opt/sge/default/common/act_qmaster", new SimpleCmdExecutor(),
@@ -72,13 +72,13 @@ public class HealthCheckProviderServiceTest {
         }
 
         @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SLURM")
+        @ConditionalOnProperty(name = "TARGET_GRID_ENGINE", havingValue = "SLURM")
         public HealthCheckProviderService slurmHealthCheckProviderService() {
             return Mockito.spy(new HealthCheckProviderService(EngineType.SLURM));
         }
 
         @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SLURM")
+        @ConditionalOnProperty(name = "TARGET_GRID_ENGINE", havingValue = "SLURM")
         public HealthCheckProvider slurmHealthCheckProvider() {
             return Mockito.spy(new SlurmHealthCheckProvider(new SimpleCmdExecutor(),
                     new GridEngineCommandCompilerImpl(new SpringTemplateEngine())));
