@@ -70,8 +70,8 @@ public class ShowConfigCommandParser {
         }
         if (checkUnexpectedError(commandResult)) {
             throw new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    String.format("Unexcpected error occurred during health check. " +
-                                    "%nexitCode = %d %nstdOut: %s %nstdErr: %s",
+                    String.format("Unexcpected error occurred during health check. "
+                                    + "%nexitCode = %d %nstdOut: %s %nstdErr: %s",
                             commandResult.getExitCode(), commandResult.getStdOut(), commandResult.getStdErr())
             );
         }
