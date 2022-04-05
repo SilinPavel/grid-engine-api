@@ -42,6 +42,7 @@ public class HostGroupOperationProviderService {
 
     private final EngineType engineType;
 
+    @Autowired
     private HostGroupProvider hostGroupProvider;
 
     /**
@@ -70,21 +71,6 @@ public class HostGroupOperationProviderService {
      */
     public HostGroup getHostGroup(final String groupName) {
         return getQueueProvider().getHostGroup(groupName);
-    }
-
-    /**
-     * This method finds among all created {@link HostGroupProvider} beans the appropriate one and sets
-     * it to the corresponding field.
-     * @param providers list of existing HostGroupProvider
-     * @see HostGroupProvider
-     */
-    @Autowired
-    public void setProvider(final List<HostGroupProvider> providers) {
-        hostGroupProvider = providers.stream()
-                .filter(s -> s.getProviderType().equals(engineType))
-                .findAny()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Host Group Provider was not found"));
     }
 
     private HostGroupProvider getQueueProvider() {

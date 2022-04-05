@@ -40,7 +40,7 @@ import java.util.List;
 public class ParallelEnvOperationProviderService {
 
     private final EngineType engineType;
-
+    @Autowired
     private ParallelEnvProvider parallelEnvProvider;
 
     /**
@@ -91,22 +91,6 @@ public class ParallelEnvOperationProviderService {
      */
     public ParallelEnv registerParallelEnv(final PeRegistrationVO registrationRequest) {
         return getConfigProvider().registerParallelEnv(registrationRequest);
-    }
-
-    /**
-     * This method finds among all created {@link ParallelEnvProvider} beans the appropriate one and sets
-     * it to the corresponding field.
-     *
-     * @param providers list of ParallelEnvProvider.
-     * @see ParallelEnvProvider
-     */
-    @Autowired
-    public void setProviders(final List<ParallelEnvProvider> providers) {
-        parallelEnvProvider = providers.stream()
-                .filter(s -> s.getProviderType().equals(engineType))
-                .findAny()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Parallel Environment Provider was not found"));
     }
 
     private ParallelEnvProvider getConfigProvider() {

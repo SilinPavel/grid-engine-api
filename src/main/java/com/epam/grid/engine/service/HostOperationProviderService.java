@@ -40,7 +40,7 @@ import java.util.List;
 public class HostOperationProviderService {
 
     private final EngineType engineType;
-
+    @Autowired
     private HostProvider hostProvider;
 
     /**
@@ -63,22 +63,6 @@ public class HostOperationProviderService {
      */
     public Listing<Host> filter(final HostFilter filter) {
         return getProvider().listHosts(filter);
-    }
-
-    /**
-     * This method finds among all created {@link HostProvider} beans the appropriate one and sets
-     * it to the corresponding field.
-     *
-     * @param providers list of HostProvider.
-     * @see HostProvider
-     */
-    @Autowired
-    public void setProviders(final List<HostProvider> providers) {
-        hostProvider = providers.stream()
-                .filter(s -> s.getProviderType().equals(engineType))
-                .findAny()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Host Provider was not found"));
     }
 
     private HostProvider getProvider() {

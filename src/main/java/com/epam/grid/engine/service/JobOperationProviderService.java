@@ -53,7 +53,7 @@ public class JobOperationProviderService {
 
     private final String logDir;
     private final EngineType engineType;
-
+    @Autowired
     private JobProvider jobProvider;
 
     /**
@@ -139,21 +139,6 @@ public class JobOperationProviderService {
             log.error(message);
             throw new IllegalStateException(message);
         }
-    }
-
-    /**
-     * This method finds among all created {@link JobProvider} beans the appropriate one and sets
-     * it to the corresponding field.
-     *
-     * @param providers List of JobProvider.
-     */
-    @Autowired
-    public void setProvider(final List<JobProvider> providers) {
-        jobProvider = providers.stream()
-                .filter(s -> s.getProviderType().equals(engineType))
-                .findAny()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Job Provider was not found"));
     }
 
     private JobProvider getJobProvider() {

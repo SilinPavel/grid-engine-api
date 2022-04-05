@@ -25,6 +25,7 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
 import com.epam.grid.engine.provider.utils.slurm.healthcheck.ShowConfigCommandParser;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 
@@ -33,6 +34,7 @@ import org.thymeleaf.context.Context;
  * to the SLURM Grid Engine and processes the response received.
  */
 @Service
+@ConditionalOnProperty(name = "grid.engine.type", havingValue = "SLURM")
 public class SlurmHealthCheckProvider implements HealthCheckProvider {
 
     private static final String SHOWCONFIG_COMMAND = "showConfig";

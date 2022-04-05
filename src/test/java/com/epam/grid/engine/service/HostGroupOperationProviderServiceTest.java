@@ -33,6 +33,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.thymeleaf.spring5.SpringTemplateEngine;
@@ -53,37 +54,8 @@ public class HostGroupOperationProviderServiceTest {
     @Autowired
     private HostGroupOperationProviderService hostGroupOperationProviderService;
 
-    @Autowired
+    @SpyBean
     private HostGroupProvider hostGroupProvider;
-
-    @Configuration
-    protected static class HostGroupConfig {
-
-        @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SGE")
-        public HostGroupOperationProviderService sgeHealthCheckProviderService() {
-            return Mockito.spy(new HostGroupOperationProviderService(EngineType.SGE));
-        }
-
-        @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SGE")
-        public HostGroupProvider sgeHostGroupOperationProviderService() {
-            return Mockito.spy(new SgeHostGroupProvider(new SimpleCmdExecutor(),
-                    new SgeHostGroupMapperImpl(), new GridEngineCommandCompilerImpl(new SpringTemplateEngine())));
-        }
-
-        @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SLURM")
-        public HostGroupOperationProviderService slurmHostGroupOperationProviderService() {
-            return Mockito.spy(new HostGroupOperationProviderService(EngineType.SLURM));
-        }
-
-        @Bean
-        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SLURM")
-        public HostGroupProvider slurmHostGroupProvider() {
-            return Mockito.spy(SgeHostGroupProvider.class);
-        }
-    }
 
     @Test
     public void shouldReturnCorrectResponse() {

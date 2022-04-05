@@ -40,20 +40,11 @@ import java.util.List;
 public class UsageOperationProviderService {
 
     private final EngineType engineType;
-
+    @Autowired
     private UsageProvider usageProvider;
 
     public UsageOperationProviderService(@Value("${grid.engine.type}") final EngineType engineType) {
         this.engineType = engineType;
-    }
-
-    @Autowired
-    public void setProviders(final List<UsageProvider> providers) {
-        usageProvider = providers.stream()
-                .filter(s -> s.getProviderType().equals(engineType))
-                .findAny()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Usage Provider was not found"));
     }
 
     /**

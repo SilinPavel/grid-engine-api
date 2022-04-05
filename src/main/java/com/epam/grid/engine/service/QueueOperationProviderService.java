@@ -42,7 +42,7 @@ import java.util.List;
 public class QueueOperationProviderService {
 
     private final EngineType engineType;
-
+    @Autowired
     private QueueProvider queueProvider;
 
     public QueueOperationProviderService(@Value("${grid.engine.type}") final EngineType engineType) {
@@ -94,22 +94,6 @@ public class QueueOperationProviderService {
      */
     public Queue updateQueue(final QueueVO updateRequest) {
         return getQueueProvider().updateQueue(updateRequest);
-    }
-
-    /**
-     * This method finds among all created {@link QueueProvider} beans the appropriate one and sets
-     * it to the corresponding field.
-     *
-     * @param providers list of QueueProvider.
-     * @see QueueProvider
-     */
-    @Autowired
-    public void setProviders(final List<QueueProvider> providers) {
-        queueProvider = providers.stream()
-                .filter(s -> s.getProviderType().equals(engineType))
-                .findAny()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Queue Provider was not found"));
     }
 
     private QueueProvider getQueueProvider() {

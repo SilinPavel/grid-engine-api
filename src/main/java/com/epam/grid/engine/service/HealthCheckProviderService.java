@@ -19,14 +19,23 @@
 
 package com.epam.grid.engine.service;
 
+import com.epam.grid.engine.cmd.GridEngineCommandCompilerImpl;
+import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
 import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
+import com.epam.grid.engine.provider.healthcheck.sge.SgeHealthCheckProvider;
+import com.epam.grid.engine.provider.healthcheck.slurm.SlurmHealthCheckProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import java.util.List;
 
@@ -38,6 +47,7 @@ import java.util.List;
 public class HealthCheckProviderService {
 
     private final EngineType engineType;
+    @Autowired
     private HealthCheckProvider healthCheckProvider;
 
     /**
@@ -58,22 +68,6 @@ public class HealthCheckProviderService {
      */
     public HealthCheckInfo checkHealth() {
         return getProvider().checkHealth();
-    }
-
-    /**
-     * This method finds among all created {@link HealthCheckProvider} beans the appropriate one and sets
-     * it to the corresponding field.
-     *
-     * @param providers list of existing HealthCheckProvider
-     * @see HealthCheckProvider
-     */
-    @Autowired
-    public void setProvider(final List<HealthCheckProvider> providers) {
-        this.healthCheckProvider = providers.stream()
-                .filter(s -> s.getProviderType().equals(engineType))
-                .findAny()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "HealthCheck Provider was not found"));
     }
 
     private HealthCheckProvider getProvider() {

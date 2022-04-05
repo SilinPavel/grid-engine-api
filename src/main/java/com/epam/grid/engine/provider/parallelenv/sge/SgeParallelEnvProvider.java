@@ -36,6 +36,7 @@ import com.epam.grid.engine.provider.utils.sge.common.SgeCommandsUtils;
 import com.epam.grid.engine.provider.utils.sge.common.SgeOutputParsingUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
