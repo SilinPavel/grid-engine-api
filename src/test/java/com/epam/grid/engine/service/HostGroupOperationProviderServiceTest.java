@@ -19,24 +19,14 @@
 
 package com.epam.grid.engine.service;
 
-import com.epam.grid.engine.cmd.GridEngineCommandCompilerImpl;
-import com.epam.grid.engine.cmd.SimpleCmdExecutor;
-import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.HostGroupFilter;
 import com.epam.grid.engine.entity.hostgroup.HostGroup;
-import com.epam.grid.engine.mapper.hostgroup.sge.SgeHostGroupMapperImpl;
 import com.epam.grid.engine.provider.hostgroup.HostGroupProvider;
-import com.epam.grid.engine.provider.hostgroup.sge.SgeHostGroupProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import java.util.Collections;
 import java.util.List;

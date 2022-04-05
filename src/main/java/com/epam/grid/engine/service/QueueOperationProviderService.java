@@ -24,11 +24,9 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.QueueFilter;
 import com.epam.grid.engine.entity.queue.Queue;
 import com.epam.grid.engine.entity.queue.QueueVO;
-import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.queue.QueueProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 

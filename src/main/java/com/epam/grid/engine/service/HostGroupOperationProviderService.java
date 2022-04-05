@@ -23,11 +23,9 @@ import com.epam.grid.engine.controller.hostgroup.HostGroupOperationController;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.hostgroup.HostGroup;
 import com.epam.grid.engine.entity.HostGroupFilter;
-import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.hostgroup.HostGroupProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 

@@ -19,25 +19,13 @@
 
 package com.epam.grid.engine.service;
 
-import com.epam.grid.engine.cmd.GridEngineCommandCompilerImpl;
-import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
-import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
-import com.epam.grid.engine.provider.healthcheck.sge.SgeHealthCheckProvider;
-import com.epam.grid.engine.provider.healthcheck.slurm.SlurmHealthCheckProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.spring5.SpringTemplateEngine;
-
-import java.util.List;
+import org.springframework.util.Assert;
 
 /**
  * Provider determines which of the grid engines shall be used
@@ -71,6 +59,7 @@ public class HealthCheckProviderService {
     }
 
     private HealthCheckProvider getProvider() {
-        return this.healthCheckProvider;
+        Assert.notNull(healthCheckProvider, String.format("Provides for type '%s' is not supported", engineType));
+        return healthCheckProvider;
     }
 }

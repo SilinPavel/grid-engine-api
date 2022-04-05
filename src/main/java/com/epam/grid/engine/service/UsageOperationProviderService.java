@@ -22,15 +22,11 @@ package com.epam.grid.engine.service;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.usage.UsageReport;
 import com.epam.grid.engine.entity.usage.UsageReportFilter;
-import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.usage.UsageProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-
-import java.util.List;
 
 /**
  * The class which redirects the call from the {@link com.epam.grid.engine.controller.usage.UsageOperationController}

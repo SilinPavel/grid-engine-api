@@ -23,15 +23,11 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.HostFilter;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.host.Host;
-import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.host.HostProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-
-import java.util.List;
 
 /**
  * This class determines which of the grid engines shall be used and calls appropriate methods.

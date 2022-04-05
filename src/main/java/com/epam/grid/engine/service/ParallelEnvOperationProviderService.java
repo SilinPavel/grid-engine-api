@@ -23,11 +23,9 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.ParallelEnvFilter;
 import com.epam.grid.engine.entity.parallelenv.ParallelEnv;
 import com.epam.grid.engine.entity.parallelenv.PeRegistrationVO;
-import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.parallelenv.ParallelEnvProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 

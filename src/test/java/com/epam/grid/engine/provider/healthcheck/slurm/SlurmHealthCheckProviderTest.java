@@ -1,6 +1,5 @@
 package com.epam.grid.engine.provider.healthcheck.slurm;
 
-import com.epam.grid.engine.cmd.GridEngineCommandCompilerImpl;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.healthcheck.GridEngineStatus;
@@ -11,12 +10,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import java.time.LocalDateTime;
 import java.util.List;
