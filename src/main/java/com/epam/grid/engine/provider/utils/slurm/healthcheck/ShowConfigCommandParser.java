@@ -44,8 +44,6 @@ public class ShowConfigCommandParser {
     private static final String UP_STATE = "UP";
     private static final String DOWN_STATE = "DOWN";
 
-    private static final String CANT_FIND_CONNECTION = "can't find connection";
-    private static final String CANT_FIND_CONNECTION_MESSAGE = "Can`t find connection via specified port";
     private static final String SLURM_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private static final String BOOT_TIME = "BOOT_TIME";
     private static final String CONFIGURATION_STRING = "Configuration data as of";
@@ -70,15 +68,17 @@ public class ShowConfigCommandParser {
                             commandResult.getExitCode(), commandResult.getStdOut(), commandResult.getStdErr())
             );
         }
-        if (checkCantFindConnectionCase(commandResult)) {
-            throw new GridEngineException(HttpStatus.NOT_FOUND, CANT_FIND_CONNECTION_MESSAGE);
+        if (checkUnexpectedError(commandResult)) {
+            throw new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    String.format("Unexcpected error occurred during health check. " +
+                                    "%nexitCode = %d %nstdOut: %s %nstdErr: %s",
+                            commandResult.getExitCode(), commandResult.getStdOut(), commandResult.getStdErr())
+            );
         }
     }
 
-    private static boolean checkCantFindConnectionCase(final CommandResult commandResult) {
-        return commandResult.getExitCode() != 0
-                && commandResult.getStdOut().get(0).contains(CANT_FIND_CONNECTION)
-                && !commandResult.getStdErr().isEmpty();
+    private static boolean checkUnexpectedError(final CommandResult commandResult) {
+        return commandResult.getExitCode() != 0 && !commandResult.getStdErr().isEmpty();
     }
 
     private static StatusInfo parseStatusInfo(final List<String> stdOut) {
