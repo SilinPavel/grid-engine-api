@@ -25,7 +25,6 @@ import com.epam.grid.engine.entity.QueueFilter;
 import com.epam.grid.engine.entity.queue.Queue;
 import com.epam.grid.engine.entity.queue.QueueVO;
 import com.epam.grid.engine.exception.GridEngineException;
-import com.epam.grid.engine.provider.parallelenv.ParallelEnvProvider;
 import com.epam.grid.engine.provider.queue.QueueProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
