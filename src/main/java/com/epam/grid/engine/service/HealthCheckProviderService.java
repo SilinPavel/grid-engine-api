@@ -21,16 +21,14 @@ package com.epam.grid.engine.service;
 
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
+import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Provider determines which of the grid engines shall be used
@@ -40,11 +38,11 @@ import java.util.stream.Collectors;
 public class HealthCheckProviderService {
 
     private final EngineType engineType;
-
-    private Map<EngineType, HealthCheckProvider> providers;
+    private HealthCheckProvider healthCheckProvider;
 
     /**
      * This method sets grid engine type in the context.
+     *
      * @param engineType type of grid engine
      * @see EngineType
      */
@@ -55,6 +53,7 @@ public class HealthCheckProviderService {
     /**
      * This method passes the request on to {@link HealthCheckProvider}
      * and returns working grid engine status information.
+     *
      * @return {@link HealthCheckInfo}
      */
     public HealthCheckInfo checkHealth() {
@@ -62,20 +61,22 @@ public class HealthCheckProviderService {
     }
 
     /**
-     * This method injects all created {@link HealthCheckProvider} beans.
-     * @param providers list of existing HealthCheckProviders
+     * This method finds among all created {@link HealthCheckProvider} beans the appropriate one and sets
+     * it to the corresponding field.
+     *
+     * @param providers list of existing HealthCheckProvider
      * @see HealthCheckProvider
      */
     @Autowired
-    public void setProviders(final List<HealthCheckProvider> providers) {
-        this.providers = providers.stream()
-                .collect(Collectors.toMap(HealthCheckProvider::getProviderType, Function.identity()));
+    public void setProvider(final List<HealthCheckProvider> providers) {
+        this.healthCheckProvider = providers.stream()
+                .filter(s -> s.getProviderType().equals(engineType))
+                .findAny()
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "HealthCheck Provider was not found"));
     }
 
     private HealthCheckProvider getProvider() {
-        final HealthCheckProvider healthCheckProvider = providers.get(engineType);
-        Assert.notNull(healthCheckProvider, String.format("Provides for type '%s' is not "
-                + "supported", engineType));
-        return healthCheckProvider;
+        return this.healthCheckProvider;
     }
 }

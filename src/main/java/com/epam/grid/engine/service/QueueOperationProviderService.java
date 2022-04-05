@@ -24,16 +24,16 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.QueueFilter;
 import com.epam.grid.engine.entity.queue.Queue;
 import com.epam.grid.engine.entity.queue.QueueVO;
+import com.epam.grid.engine.exception.GridEngineException;
+import com.epam.grid.engine.provider.parallelenv.ParallelEnvProvider;
 import com.epam.grid.engine.provider.queue.QueueProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * The class which processes the information received from {@link QueueOperationController} and calls the corresponding
@@ -44,7 +44,7 @@ public class QueueOperationProviderService {
 
     private final EngineType engineType;
 
-    private Map<EngineType, QueueProvider> providers;
+    private QueueProvider queueProvider;
 
     public QueueOperationProviderService(@Value("${grid.engine.type}") final EngineType engineType) {
         this.engineType = engineType;
@@ -97,14 +97,23 @@ public class QueueOperationProviderService {
         return getQueueProvider().updateQueue(updateRequest);
     }
 
+    /**
+     * This method finds among all created {@link QueueProvider} beans the appropriate one and sets
+     * it to the corresponding field.
+     *
+     * @param providers list of QueueProvider.
+     * @see QueueProvider
+     */
     @Autowired
     public void setProviders(final List<QueueProvider> providers) {
-        this.providers = providers.stream()
-                .collect(Collectors.toMap(QueueProvider::getProviderType, Function.identity()));
+        queueProvider = providers.stream()
+                .filter(s -> s.getProviderType().equals(engineType))
+                .findAny()
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Queue Provider was not found"));
     }
 
     private QueueProvider getQueueProvider() {
-        final QueueProvider queueProvider = providers.get(engineType);
         Assert.notNull(queueProvider, String.format("Provides for type '%s' is not supported", engineType));
         return queueProvider;
     }

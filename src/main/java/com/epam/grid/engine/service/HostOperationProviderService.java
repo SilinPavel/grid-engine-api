@@ -23,16 +23,15 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.HostFilter;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.host.Host;
+import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.host.HostProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * This class determines which of the grid engines shall be used and calls appropriate methods.
@@ -42,7 +41,7 @@ public class HostOperationProviderService {
 
     private final EngineType engineType;
 
-    private Map<EngineType, HostProvider> providers;
+    private HostProvider hostProvider;
 
     /**
      * This method sets grid engine type in the context.
@@ -67,19 +66,22 @@ public class HostOperationProviderService {
     }
 
     /**
-     * Injects all available {@link HostProvider} implementations.
+     * This method finds among all created {@link HostProvider} beans the appropriate one and sets
+     * it to the corresponding field.
      *
      * @param providers list of HostProvider.
      * @see HostProvider
      */
     @Autowired
     public void setProviders(final List<HostProvider> providers) {
-        this.providers = providers.stream()
-                .collect(Collectors.toMap(HostProvider::getProviderType, Function.identity()));
+        hostProvider = providers.stream()
+                .filter(s -> s.getProviderType().equals(engineType))
+                .findAny()
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Host Provider was not found"));
     }
 
     private HostProvider getProvider() {
-        final HostProvider hostProvider = providers.get(engineType);
         Assert.notNull(hostProvider, String.format("Provides for type '%s' is not supported", engineType));
         return hostProvider;
     }

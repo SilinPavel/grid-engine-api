@@ -27,11 +27,13 @@ import com.epam.grid.engine.entity.job.Job;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.entity.job.JobOptions;
+import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.job.JobProvider;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -40,9 +42,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * This class defines operations for processing information from the user
@@ -55,10 +54,7 @@ public class JobOperationProviderService {
     private final String logDir;
     private final EngineType engineType;
 
-    /**
-     * Collection of providers by engine type.
-     */
-    private Map<EngineType, JobProvider> providers;
+    private JobProvider jobProvider;
 
     /**
      * Constructor, sets the specified type of the executed engine and the path to job log.
@@ -146,18 +142,21 @@ public class JobOperationProviderService {
     }
 
     /**
-     * Creates a map of suppliers by engine type.
+     * This method finds among all created {@link JobProvider} beans the appropriate one and sets
+     * it to the corresponding field.
      *
-     * @param providers List of providers.
+     * @param providers List of JobProvider.
      */
     @Autowired
-    public void setProviders(final List<JobProvider> providers) {
-        this.providers = providers.stream()
-                .collect(Collectors.toMap(JobProvider::getProviderType, Function.identity()));
+    public void setProvider(final List<JobProvider> providers) {
+        jobProvider = providers.stream()
+                .filter(s -> s.getProviderType().equals(engineType))
+                .findAny()
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Job Provider was not found"));
     }
 
     private JobProvider getJobProvider() {
-        final JobProvider jobProvider = providers.get(engineType);
         Assert.notNull(jobProvider, String.format("Provides for type '%s' is not supported", engineType));
         return jobProvider;
     }

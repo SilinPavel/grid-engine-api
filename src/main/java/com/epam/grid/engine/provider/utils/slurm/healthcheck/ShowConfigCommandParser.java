@@ -133,7 +133,7 @@ public class ShowConfigCommandParser {
     private static LocalDateTime getStartTime(final List<String> stdOut) {
         return stdOut.stream().filter(out -> out.contains(BOOT_TIME)).findAny()
                 .map(bootTimeStr -> {
-                    String[] bootTimeKeyValue = bootTimeStr.split(EQUAL_SIGN);
+                    final String[] bootTimeKeyValue = bootTimeStr.split(EQUAL_SIGN);
                     return bootTimeKeyValue.length == 2 ? bootTimeKeyValue[1].trim() : "";
                 })
                 .map(start -> tryParseStringToLocalDateTime(start, DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT)))

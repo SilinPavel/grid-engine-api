@@ -23,16 +23,15 @@ import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.ParallelEnvFilter;
 import com.epam.grid.engine.entity.parallelenv.ParallelEnv;
 import com.epam.grid.engine.entity.parallelenv.PeRegistrationVO;
+import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.parallelenv.ParallelEnvProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * This class determines which of the grid engines shall be used and calls appropriate methods.
@@ -42,7 +41,7 @@ public class ParallelEnvOperationProviderService {
 
     private final EngineType engineType;
 
-    private Map<EngineType, ParallelEnvProvider> providers;
+    private ParallelEnvProvider parallelEnvProvider;
 
     /**
      * This method sets grid engine type in the context.
@@ -95,20 +94,23 @@ public class ParallelEnvOperationProviderService {
     }
 
     /**
-     * Injects all available {@link ParallelEnvProvider} implementations.
+     * This method finds among all created {@link ParallelEnvProvider} beans the appropriate one and sets
+     * it to the corresponding field.
      *
      * @param providers list of ParallelEnvProvider.
      * @see ParallelEnvProvider
      */
     @Autowired
     public void setProviders(final List<ParallelEnvProvider> providers) {
-        this.providers = providers.stream()
-                .collect(Collectors.toMap(ParallelEnvProvider::getProviderType, Function.identity()));
+        parallelEnvProvider = providers.stream()
+                .filter(s -> s.getProviderType().equals(engineType))
+                .findAny()
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Parallel Environment Provider was not found"));
     }
 
     private ParallelEnvProvider getConfigProvider() {
-        final ParallelEnvProvider parallelEnv = providers.get(engineType);
-        Assert.notNull(parallelEnv, String.format("Provides for type '%s' is not supported", engineType));
-        return parallelEnv;
+        Assert.notNull(parallelEnvProvider, String.format("Provides for type '%s' is not supported", engineType));
+        return parallelEnvProvider;
     }
 }

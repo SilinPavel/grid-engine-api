@@ -23,16 +23,15 @@ import com.epam.grid.engine.controller.hostgroup.HostGroupOperationController;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.hostgroup.HostGroup;
 import com.epam.grid.engine.entity.HostGroupFilter;
+import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.hostgroup.HostGroupProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * The class which processes the information received from {@link HostGroupOperationController}
@@ -43,7 +42,7 @@ public class HostGroupOperationProviderService {
 
     private final EngineType engineType;
 
-    private Map<EngineType, HostGroupProvider> providers;
+    private HostGroupProvider hostGroupProvider;
 
     /**
      * Sets grid engine type in the context.
@@ -74,18 +73,21 @@ public class HostGroupOperationProviderService {
     }
 
     /**
-     * Injects all created {@link HostGroupProvider} beans.
-     * @param providers list of existing HostGroupProviders
+     * This method finds among all created {@link HostGroupProvider} beans the appropriate one and sets
+     * it to the corresponding field.
+     * @param providers list of existing HostGroupProvider
      * @see HostGroupProvider
      */
     @Autowired
-    public void setProviders(final List<HostGroupProvider> providers) {
-        this.providers = providers.stream()
-                .collect(Collectors.toMap(HostGroupProvider::getProviderType, Function.identity()));
+    public void setProvider(final List<HostGroupProvider> providers) {
+        hostGroupProvider = providers.stream()
+                .filter(s -> s.getProviderType().equals(engineType))
+                .findAny()
+                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Host Group Provider was not found"));
     }
 
     private HostGroupProvider getQueueProvider() {
-        final HostGroupProvider hostGroupProvider = providers.get(engineType);
         Assert.notNull(hostGroupProvider, String.format("Provides for type '%s' is not supported", engineType));
         return hostGroupProvider;
     }

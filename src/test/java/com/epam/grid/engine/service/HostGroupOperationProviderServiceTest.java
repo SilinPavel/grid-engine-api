@@ -19,14 +19,23 @@
 
 package com.epam.grid.engine.service;
 
+import com.epam.grid.engine.cmd.GridEngineCommandCompilerImpl;
+import com.epam.grid.engine.cmd.SimpleCmdExecutor;
+import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.HostGroupFilter;
 import com.epam.grid.engine.entity.hostgroup.HostGroup;
+import com.epam.grid.engine.mapper.hostgroup.sge.SgeHostGroupMapperImpl;
+import com.epam.grid.engine.provider.hostgroup.HostGroupProvider;
 import com.epam.grid.engine.provider.hostgroup.sge.SgeHostGroupProvider;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.thymeleaf.spring5.SpringTemplateEngine;
 
 import java.util.Collections;
 import java.util.List;
@@ -44,8 +53,37 @@ public class HostGroupOperationProviderServiceTest {
     @Autowired
     private HostGroupOperationProviderService hostGroupOperationProviderService;
 
-    @SpyBean
-    private SgeHostGroupProvider sgeHostGroupProvider;
+    @Autowired
+    private HostGroupProvider hostGroupProvider;
+
+    @Configuration
+    protected static class HostGroupConfig {
+
+        @Bean
+        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SGE")
+        public HostGroupOperationProviderService sgeHealthCheckProviderService() {
+            return Mockito.spy(new HostGroupOperationProviderService(EngineType.SGE));
+        }
+
+        @Bean
+        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SGE")
+        public HostGroupProvider sgeHostGroupOperationProviderService() {
+            return Mockito.spy(new SgeHostGroupProvider(new SimpleCmdExecutor(),
+                    new SgeHostGroupMapperImpl(), new GridEngineCommandCompilerImpl(new SpringTemplateEngine())));
+        }
+
+        @Bean
+        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SLURM")
+        public HostGroupOperationProviderService slurmHostGroupOperationProviderService() {
+            return Mockito.spy(new HostGroupOperationProviderService(EngineType.SLURM));
+        }
+
+        @Bean
+        @ConditionalOnProperty(name = "ENGINE_TYPE", havingValue = "SLURM")
+        public HostGroupProvider slurmHostGroupProvider() {
+            return Mockito.spy(SgeHostGroupProvider.class);
+        }
+    }
 
     @Test
     public void shouldReturnCorrectResponse() {
@@ -57,9 +95,9 @@ public class HostGroupOperationProviderServiceTest {
         final HostGroupFilter hostGroupFilter = new HostGroupFilter();
         hostGroupFilter.setHostGroupNames(Collections.singletonList(HOST_GROUP_NAME));
 
-        doReturn(hostGroups).when(sgeHostGroupProvider).listHostGroups(hostGroupFilter);
+        doReturn(hostGroups).when(hostGroupProvider).listHostGroups(hostGroupFilter);
         Assertions.assertEquals(hostGroups, hostGroupOperationProviderService.listHostGroups(hostGroupFilter));
-        verify(sgeHostGroupProvider, times(1)).listHostGroups(hostGroupFilter);
+        verify(hostGroupProvider, times(1)).listHostGroups(hostGroupFilter);
     }
 
     @Test
@@ -68,8 +106,8 @@ public class HostGroupOperationProviderServiceTest {
                 .hostGroupName(HOST_GROUP_NAME)
                 .hostGroupEntry(Collections.singletonList(HOST_GROUP_ENTRY))
                 .build();
-        doReturn(hostGroup).when(sgeHostGroupProvider).getHostGroup(HOST_GROUP_NAME);
+        doReturn(hostGroup).when(hostGroupProvider).getHostGroup(HOST_GROUP_NAME);
         Assertions.assertEquals(hostGroup, hostGroupOperationProviderService.getHostGroup(HOST_GROUP_NAME));
-        verify(sgeHostGroupProvider, times(1)).getHostGroup(HOST_GROUP_NAME);
+        verify(hostGroupProvider, times(1)).getHostGroup(HOST_GROUP_NAME);
     }
 }
