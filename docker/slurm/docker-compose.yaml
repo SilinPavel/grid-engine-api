@@ -41,7 +41,7 @@ services:
     command: [ "slurmctld" ]
     container_name: slurmctld
     environment:
-      ENGINE_TYPE: SLURM
+      TARGET_GRID_ENGINE: SLURM
     hostname: slurmctld
     volumes:
       - etc_munge:/etc/munge
