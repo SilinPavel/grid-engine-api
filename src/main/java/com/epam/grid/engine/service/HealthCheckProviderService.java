@@ -19,13 +19,10 @@
 
 package com.epam.grid.engine.service;
 
-import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
 import com.epam.grid.engine.provider.healthcheck.HealthCheckProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 /**
  * Provider determines which of the grid engines shall be used
@@ -34,19 +31,8 @@ import org.springframework.util.Assert;
 @Service
 public class HealthCheckProviderService {
 
-    private final EngineType engineType;
     @Autowired
     private HealthCheckProvider healthCheckProvider;
-
-    /**
-     * This method sets grid engine type in the context.
-     *
-     * @param engineType type of grid engine
-     * @see EngineType
-     */
-    public HealthCheckProviderService(@Value("${grid.engine.type}") final EngineType engineType) {
-        this.engineType = engineType;
-    }
 
     /**
      * This method passes the request on to {@link HealthCheckProvider}
@@ -55,11 +41,7 @@ public class HealthCheckProviderService {
      * @return {@link HealthCheckInfo}
      */
     public HealthCheckInfo checkHealth() {
-        return getProvider().checkHealth();
+        return healthCheckProvider.checkHealth();
     }
 
-    private HealthCheckProvider getProvider() {
-        Assert.notNull(healthCheckProvider, String.format("Provides for type '%s' is not supported", engineType));
-        return healthCheckProvider;
-    }
 }

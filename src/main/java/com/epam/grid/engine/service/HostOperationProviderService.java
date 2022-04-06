@@ -19,15 +19,12 @@
 
 package com.epam.grid.engine.service;
 
-import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.HostFilter;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.host.Host;
 import com.epam.grid.engine.provider.host.HostProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 /**
  * This class determines which of the grid engines shall be used and calls appropriate methods.
@@ -35,19 +32,8 @@ import org.springframework.util.Assert;
 @Service
 public class HostOperationProviderService {
 
-    private final EngineType engineType;
     @Autowired
     private HostProvider hostProvider;
-
-    /**
-     * This method sets grid engine type in the context.
-     *
-     * @param engineType type of grid engine
-     * @see EngineType
-     */
-    public HostOperationProviderService(@Value("${grid.engine.type}") final EngineType engineType) {
-        this.engineType = engineType;
-    }
 
     /**
      * This method processes the request to provider and returns listing of hosts,
@@ -58,11 +44,7 @@ public class HostOperationProviderService {
      * @see HostFilter
      */
     public Listing<Host> filter(final HostFilter filter) {
-        return getProvider().listHosts(filter);
+        return hostProvider.listHosts(filter);
     }
 
-    private HostProvider getProvider() {
-        Assert.notNull(hostProvider, String.format("Provides for type '%s' is not supported", engineType));
-        return hostProvider;
-    }
 }

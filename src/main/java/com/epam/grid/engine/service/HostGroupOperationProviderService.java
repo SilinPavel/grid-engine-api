@@ -20,14 +20,11 @@
 package com.epam.grid.engine.service;
 
 import com.epam.grid.engine.controller.hostgroup.HostGroupOperationController;
-import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.hostgroup.HostGroup;
 import com.epam.grid.engine.entity.HostGroupFilter;
 import com.epam.grid.engine.provider.hostgroup.HostGroupProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 import java.util.List;
 
@@ -38,27 +35,17 @@ import java.util.List;
 @Service
 public class HostGroupOperationProviderService {
 
-    private final EngineType engineType;
-
     @Autowired
     private HostGroupProvider hostGroupProvider;
 
     /**
-     * Sets grid engine type in the context.
-     * @param engineType type of grid engine
-     * @see EngineType
-     */
-    public HostGroupOperationProviderService(@Value("${grid.engine.type}") final EngineType engineType) {
-        this.engineType = engineType;
-    }
-
-    /**
      * Returns a List of {@link HostGroup}s according to {@link HostGroupFilter} parameter.
+     *
      * @param hostGroupFilter a provided filter
      * @return a List of HostGroups according to hostGroupFilter parameter
      */
     public List<HostGroup> listHostGroups(final HostGroupFilter hostGroupFilter) {
-        return getQueueProvider().listHostGroups(hostGroupFilter);
+        return hostGroupProvider.listHostGroups(hostGroupFilter);
     }
 
     /**
@@ -68,11 +55,7 @@ public class HostGroupOperationProviderService {
      * @return Information about the group.
      */
     public HostGroup getHostGroup(final String groupName) {
-        return getQueueProvider().getHostGroup(groupName);
+        return hostGroupProvider.getHostGroup(groupName);
     }
 
-    private HostGroupProvider getQueueProvider() {
-        Assert.notNull(hostGroupProvider, String.format("Provides for type '%s' is not supported", engineType));
-        return hostGroupProvider;
-    }
 }

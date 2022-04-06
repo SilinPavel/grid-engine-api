@@ -19,7 +19,6 @@
 
 package com.epam.grid.engine.service;
 
-import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
 import com.epam.grid.engine.entity.job.DeletedJobInfo;
@@ -33,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
@@ -49,21 +47,18 @@ import java.nio.file.Path;
 public class JobOperationProviderService {
 
     private final String logDir;
-    private final EngineType engineType;
+
     @Autowired
     private JobProvider jobProvider;
 
     /**
      * Constructor, sets the specified type of the executed engine and the path to job log.
      *
-     * @param logDir     the path to the directory where all log files will be stored
-     *                   occurred when processing the job
-     * @param engineType an engine for working with jobs
+     * @param logDir the path to the directory where all log files will be stored
+     *               occurred when processing the job
      */
-    public JobOperationProviderService(@Value("${job.log.dir}") final String logDir,
-                                       @Value("${grid.engine.type}") final EngineType engineType) {
+    public JobOperationProviderService(@Value("${job.log.dir}") final String logDir) {
         this.logDir = logDir;
-        this.engineType = engineType;
     }
 
     /**
@@ -73,7 +68,7 @@ public class JobOperationProviderService {
      * @return list of jobs.
      */
     public Listing<Job> filter(final JobFilter jobFilter) {
-        return getJobProvider().filterJobs(jobFilter);
+        return jobProvider.filterJobs(jobFilter);
     }
 
     /**
@@ -83,7 +78,7 @@ public class JobOperationProviderService {
      * @return Information about deleted job.
      */
     public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
-        return getJobProvider().deleteJob(deleteJobFilter);
+        return jobProvider.deleteJob(deleteJobFilter);
     }
 
     /**
@@ -93,7 +88,7 @@ public class JobOperationProviderService {
      * @return Running job.
      */
     public Job runJob(final JobOptions options) {
-        return getJobProvider().runJob(options);
+        return jobProvider.runJob(options);
     }
 
     /**
@@ -108,7 +103,7 @@ public class JobOperationProviderService {
      */
     public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType,
                                     final int lines, final boolean fromHead) {
-        return getJobProvider().getJobLogInfo(jobId, logType, lines, fromHead);
+        return jobProvider.getJobLogInfo(jobId, logType, lines, fromHead);
     }
 
     /**
@@ -120,7 +115,7 @@ public class JobOperationProviderService {
      * @return The job log file like a stream.
      */
     public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
-        return getJobProvider().getJobLogFile(jobId, logType);
+        return jobProvider.getJobLogFile(jobId, logType);
     }
 
     /**
@@ -138,8 +133,4 @@ public class JobOperationProviderService {
         }
     }
 
-    private JobProvider getJobProvider() {
-        Assert.notNull(jobProvider, String.format("Provides for type '%s' is not supported", engineType));
-        return jobProvider;
-    }
 }
