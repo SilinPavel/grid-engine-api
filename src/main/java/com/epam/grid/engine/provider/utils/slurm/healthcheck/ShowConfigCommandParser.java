@@ -132,10 +132,8 @@ public class ShowConfigCommandParser {
 
     private static LocalDateTime getStartTime(final List<String> stdOut) {
         return stdOut.stream().filter(out -> out.contains(BOOT_TIME)).findAny()
-                .map(bootTimeStr -> {
-                    final String[] bootTimeKeyValue = bootTimeStr.split(EQUAL_SIGN);
-                    return bootTimeKeyValue.length == 2 ? bootTimeKeyValue[1].trim() : "";
-                })
+                .map(bootTimeStr -> bootTimeStr.split(EQUAL_SIGN))
+                .map(splitStr -> splitStr.length == 2 ? splitStr[1].trim() : "")
                 .map(start -> tryParseStringToLocalDateTime(start, DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT)))
                 .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "boot time wasn't found in stdOut, stdOut: " + stdOut));
