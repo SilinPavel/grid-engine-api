@@ -34,8 +34,18 @@ import java.util.List;
 @Service
 public class ParallelEnvOperationProviderService {
 
+    private final ParallelEnvProvider parallelEnvProvider;
+
+    /**
+     * Constructor, sets created parallelEnvProvider bean to the class field.
+     *
+     * @param parallelEnvProvider created ParallelEnvProvider
+     * @see ParallelEnvProvider
+     */
     @Autowired
-    private ParallelEnvProvider parallelEnvProvider;
+    public ParallelEnvOperationProviderService(final ParallelEnvProvider parallelEnvProvider) {
+        this.parallelEnvProvider = parallelEnvProvider;
+    }
 
     /**
      * This method processes the request to provider and returns listing of pe according to filter.

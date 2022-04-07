@@ -35,8 +35,17 @@ import java.util.List;
 @Service
 public class HostGroupOperationProviderService {
 
+    private final HostGroupProvider hostGroupProvider;
+
+    /**
+     * Constructor, sets created hostGroupProvider bean to the class field.
+     * @param hostGroupProvider created HostGroupProvider
+     * @see HostGroupProvider
+     */
     @Autowired
-    private HostGroupProvider hostGroupProvider;
+    public HostGroupOperationProviderService(final HostGroupProvider hostGroupProvider) {
+        this.hostGroupProvider = hostGroupProvider;
+    }
 
     /**
      * Returns a List of {@link HostGroup}s according to {@link HostGroupFilter} parameter.

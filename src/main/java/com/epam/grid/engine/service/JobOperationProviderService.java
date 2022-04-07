@@ -47,17 +47,19 @@ import java.nio.file.Path;
 public class JobOperationProviderService {
 
     private final String logDir;
-
-    @Autowired
-    private JobProvider jobProvider;
+    private final JobProvider jobProvider;
 
     /**
-     * Constructor, sets the specified type of the executed engine and the path to job log.
+     * Constructor, sets created jobProvider bean to the class field and the path to job log.
      *
-     * @param logDir the path to the directory where all log files will be stored
-     *               occurred when processing the job
+     * @param jobProvider created JobProvider
+     * @param logDir      the path to the directory where all log files will be stored
+     *                    occurred when processing the job
+     * @see JobProvider
      */
-    public JobOperationProviderService(@Value("${job.log.dir}") final String logDir) {
+    @Autowired
+    public JobOperationProviderService(final JobProvider jobProvider, @Value("${job.log.dir}") final String logDir) {
+        this.jobProvider = jobProvider;
         this.logDir = logDir;
     }
 

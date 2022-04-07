@@ -32,8 +32,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class HostOperationProviderService {
 
+    private final HostProvider hostProvider;
+
+    /**
+     * Constructor, sets created hostProvider bean to the class field.
+     *
+     * @param hostProvider created HostGroupProvider
+     * @see HostProvider
+     */
     @Autowired
-    private HostProvider hostProvider;
+    public HostOperationProviderService(final HostProvider hostProvider) {
+        this.hostProvider = hostProvider;
+    }
 
     /**
      * This method processes the request to provider and returns listing of hosts,

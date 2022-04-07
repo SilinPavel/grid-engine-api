@@ -32,8 +32,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class UsageOperationProviderService {
 
+    private final UsageProvider usageProvider;
+
+    /**
+     * Constructor, sets created usageProvider bean to the class field.
+     *
+     * @param usageProvider created UsageProvider
+     * @see UsageProvider
+     */
     @Autowired
-    private UsageProvider usageProvider;
+    public UsageOperationProviderService(final UsageProvider usageProvider) {
+        this.usageProvider = usageProvider;
+    }
 
     /**
      * Returns a repor`t containing usage summary information received from the corresponding

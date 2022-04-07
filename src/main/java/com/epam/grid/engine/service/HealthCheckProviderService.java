@@ -31,8 +31,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class HealthCheckProviderService {
 
+    private final HealthCheckProvider healthCheckProvider;
+
+    /**
+     * Constructor, sets created healthCheckProvider bean to the class field.
+     * @param healthCheckProvider created HealthCheckProvider
+     * @see HealthCheckProvider
+     */
     @Autowired
-    private HealthCheckProvider healthCheckProvider;
+    public HealthCheckProviderService(final HealthCheckProvider healthCheckProvider) {
+        this.healthCheckProvider = healthCheckProvider;
+    }
 
     /**
      * This method passes the request on to {@link HealthCheckProvider}

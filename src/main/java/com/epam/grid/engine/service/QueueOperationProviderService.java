@@ -36,8 +36,18 @@ import java.util.List;
 @Service
 public class QueueOperationProviderService {
 
+    private final QueueProvider queueProvider;
+
+    /**
+     * Constructor, sets created queueProvider bean to the class field.
+     *
+     * @param queueProvider created QueueProvider
+     * @see QueueProvider
+     */
     @Autowired
-    private QueueProvider queueProvider;
+    public QueueOperationProviderService(final QueueProvider queueProvider) {
+        this.queueProvider = queueProvider;
+    }
 
     /**
      * Returns a List of existing Queues with their names.
@@ -77,6 +87,7 @@ public class QueueOperationProviderService {
     public Queue registerQueue(final QueueVO registrationRequest) {
         return queueProvider.registerQueue(registrationRequest);
     }
+
 
     /**
      * Updates a {@code queue} with specified properties in preassigned grid engine system.
