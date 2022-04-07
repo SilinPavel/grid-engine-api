@@ -46,7 +46,7 @@ public class UsageOperationProviderService {
     }
 
     /**
-     * Returns a repor`t containing usage summary information received from the corresponding
+     * Returns a report containing usage summary information received from the corresponding
      * UsageProvider type with filters applied.
      *
      * @param filter List of keys for setting filters.
