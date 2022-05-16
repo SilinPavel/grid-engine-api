@@ -43,7 +43,7 @@ public interface SgeJobMapper {
     /**
      * The actual mapping method expects the source object as parameter and returns the target object.
      *
-     * @param sgeJob an mapping object
+     * @param sgeJob a mapping object
      * @return The mapped object
      */
     @Mapping(target = "state", ignore = true)
@@ -52,8 +52,8 @@ public interface SgeJobMapper {
     /**
      * The method maps the state attribute of the source object to the target object.
      *
-     * @param sgeJob an mapping object
-     * @param job    an target object
+     * @param sgeJob a mapping object
+     * @param job    a target object
      */
     @AfterMapping
     default void fillState(final SgeJob sgeJob, final @MappingTarget Job job) {
