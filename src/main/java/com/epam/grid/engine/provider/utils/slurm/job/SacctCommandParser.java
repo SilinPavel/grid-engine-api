@@ -24,7 +24,6 @@ import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.utils.slurm.DateUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 import java.time.format.DateTimeFormatter;

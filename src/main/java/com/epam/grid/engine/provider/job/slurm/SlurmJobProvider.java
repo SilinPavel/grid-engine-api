@@ -116,7 +116,7 @@ public class SlurmJobProvider implements JobProvider {
         if (stdOut.size() > 1) {
             return new Listing<>(stdOut.stream()
                     .skip(1)
-                    .map(jobDataList->SacctCommandParser.parseSlurmJob(jobDataList, fieldsCount))
+                    .map(jobDataList -> SacctCommandParser.parseSlurmJob(jobDataList, fieldsCount))
                     .filter(parsedJobList -> !CollectionUtils.isEmpty(parsedJobList))
                     .map(SacctCommandParser::mapJobDataToSlurmJob)
                     .map(jobMapper::slurmJobToJob)
