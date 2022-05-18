@@ -36,8 +36,10 @@ import com.epam.grid.engine.provider.job.JobProvider;
 import com.epam.grid.engine.provider.utils.CommandsUtils;
 import com.epam.grid.engine.provider.utils.slurm.job.SacctCommandParser;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.thymeleaf.context.Context;
 
 import java.io.InputStream;
@@ -65,6 +67,8 @@ public class SlurmJobProvider implements JobProvider {
      */
     private final SimpleCmdExecutor simpleCmdExecutor;
 
+    private final int fieldsCount;
+
     /**
      * An object that forms the structure of an executable command according to a template.
      */
@@ -72,10 +76,12 @@ public class SlurmJobProvider implements JobProvider {
 
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
-                            final GridEngineCommandCompiler commandCompiler) {
+                            final GridEngineCommandCompiler commandCompiler,
+                            @Value("${slurm.job.output-fields-count}") final int fieldsCount) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
+        this.fieldsCount = fieldsCount;
     }
 
     @Override
@@ -110,8 +116,8 @@ public class SlurmJobProvider implements JobProvider {
         if (stdOut.size() > 1) {
             return new Listing<>(stdOut.stream()
                     .skip(1)
-                    .map(SacctCommandParser::parseSlurmJob)
-                    .filter(s -> !s.isEmpty())
+                    .map(jobDataList->SacctCommandParser.parseSlurmJob(jobDataList, fieldsCount))
+                    .filter(parsedJobList -> !CollectionUtils.isEmpty(parsedJobList))
                     .map(SacctCommandParser::mapJobDataToSlurmJob)
                     .map(jobMapper::slurmJobToJob)
                     .collect(Collectors.toList()));
@@ -121,23 +127,23 @@ public class SlurmJobProvider implements JobProvider {
 
     @Override
     public Job runJob(final JobOptions options) {
-        return null;
+        throw new UnsupportedOperationException("Run job operation haven't implemented yet");
     }
 
     @Override
     public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
-        return null;
+        throw new UnsupportedOperationException("Job deletion operation haven't implemented yet");
     }
 
     @Override
     public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType, final int lines,
                                     final boolean fromHead) {
-        return null;
+        throw new UnsupportedOperationException("Job log info retrieving operation haven't implemented yet");
     }
 
     @Override
     public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
-        return null;
+        throw new UnsupportedOperationException("Job log info file retrieving operation haven't implemented yet");
     }
 
 }

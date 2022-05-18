@@ -24,6 +24,7 @@ import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.utils.slurm.DateUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 
 import java.time.format.DateTimeFormatter;
@@ -40,9 +41,10 @@ public final class SacctCommandParser {
     private static final String FAILED_TO_PARSE_JOB_DATA = "failed to parse job data";
     private static final String SLURM_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
-    public static List<String> parseSlurmJob(final String jobString) {
+    public static List<String> parseSlurmJob(final String jobString,
+                                             final int fieldsCount) {
         final String[] jobArray = jobString.split(STANDARD_SLURM_DELIMETER);
-        if (jobArray.length != 52) {
+        if (jobArray.length != fieldsCount) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "An error occurred during job data parsing");
 
         }

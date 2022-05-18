@@ -28,7 +28,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * This interface consists of the configuration of a mapper for implementation by the MapStruct processor
@@ -39,6 +39,17 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 @ConditionalOnProperty(name = "grid.engine.type", havingValue = "SLURM")
 public interface SlurmJobMapper {
+
+    String finishedStatusCode = "COMPLETED";
+    Set<String> pendingStatusCodeList = Set.of("CONFIGURING", "PENDING", "REQUEUE_FED", "REQUEUE_HOLD",
+            "REQUEUED");
+    Set<String> runningStatusCodeList = Set.of("COMPLETING", "RUNNING", "RESIZING", "SIGNALING",
+            "STAGE_OUT");
+    Set<String> suspendedStatusCodeList = Set.of("RESV_DEL_HOLD", "REVOKED", "STOPPED",
+            "SUSPENDED");
+    Set<String> deletedStatusCodeList = Set.of("SPECIAL_EXIT", "CANCELLED", "TIMEOUT");
+    Set<String> errorStatusCodeList = Set.of("BOOT_FAIL", "DEADLINE", "FAILED", "NODE_FAIL",
+            "OUT_OF_MEMORY", "PREEMPTED");
 
     /**
      * The actual mapping method expects the source object as parameter and returns the target object.
@@ -69,16 +80,7 @@ public interface SlurmJobMapper {
     }
 
     default JobState.Category defineCategory(final String state) {
-        final String finishedStatusCode = "COMPLETED";
-        final List<String> pendingStatusCodeList = List.of("CONFIGURING", "PENDING", "REQUEUE_FED", "REQUEUE_HOLD",
-                "REQUEUED");
-        final List<String> runningStatusCodeList = List.of("COMPLETING", "RUNNING", "RESIZING", "SIGNALING",
-                "STAGE_OUT");
-        final List<String> suspendedStatusCodeList = List.of("RESV_DEL_HOLD", "REVOKED", "STOPPED",
-                "SUSPENDED");
-        final List<String> deletedStatusCodeList = List.of("SPECIAL_EXIT", "CANCELLED", "TIMEOUT");
-        final List<String> errorStatusCodeList = List.of("BOOT_FAIL", "DEADLINE", "FAILED", "NODE_FAIL",
-                "OUT_OF_MEMORY", "PREEMPTED");
+
 
         if (state.equals(finishedStatusCode)) {
             return JobState.Category.FINISHED;

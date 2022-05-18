@@ -31,7 +31,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
@@ -118,8 +117,7 @@ public class ShowConfigCommandParser {
                 .map(start -> start.replaceAll(SPACES_REGEX, SPACE))
                 .map(start -> start.replace(CONFIGURATION_STRING, EMPTY_STRING))
                 .map(String::trim)
-                .map(start -> DateUtils.tryParseStringToLocalDateTime(start,
-                        DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT)))
+                .map(start -> DateUtils.tryParseStringToLocalDateTime(start, SLURM_DATE_FORMAT))
                 .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "check time wasn't found in stdOut, stdOut: " + stdOut));
     }
@@ -128,8 +126,7 @@ public class ShowConfigCommandParser {
         return stdOut.stream().filter(out -> out.contains(BOOT_TIME)).findAny()
                 .map(bootTimeStr -> bootTimeStr.split(EQUAL_SIGN))
                 .map(splitStr -> splitStr.length == 2 ? splitStr[1].trim() : "")
-                .map(start -> DateUtils.tryParseStringToLocalDateTime(start,
-                        DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT)))
+                .map(start -> DateUtils.tryParseStringToLocalDateTime(start, SLURM_DATE_FORMAT))
                 .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "boot time wasn't found in stdOut, stdOut: " + stdOut));
     }

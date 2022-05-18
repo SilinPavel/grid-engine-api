@@ -40,4 +40,10 @@ public final class DateUtils {
                     dateTimeParseException);
         }
     }
+
+    public static LocalDateTime tryParseStringToLocalDateTime(final String dateString,
+                                                              final String formatter) {
+        return tryParseStringToLocalDateTime(dateString, DateTimeFormatter.ofPattern(formatter));
+
+    }
 }
