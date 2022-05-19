@@ -40,16 +40,13 @@ import java.util.Set;
 @ConditionalOnProperty(name = "grid.engine.type", havingValue = "SLURM")
 public interface SlurmJobMapper {
 
-    String finishedStatusCode = "COMPLETED";
-    Set<String> pendingStatusCodeList = Set.of("CONFIGURING", "PENDING", "REQUEUE_FED", "REQUEUE_HOLD",
-            "REQUEUED");
-    Set<String> runningStatusCodeList = Set.of("COMPLETING", "RUNNING", "RESIZING", "SIGNALING",
-            "STAGE_OUT");
-    Set<String> suspendedStatusCodeList = Set.of("RESV_DEL_HOLD", "REVOKED", "STOPPED",
-            "SUSPENDED");
-    Set<String> deletedStatusCodeList = Set.of("SPECIAL_EXIT", "CANCELLED", "TIMEOUT");
-    Set<String> errorStatusCodeList = Set.of("BOOT_FAIL", "DEADLINE", "FAILED", "NODE_FAIL",
-            "OUT_OF_MEMORY", "PREEMPTED");
+    String FINISHED_STATUS_CODE = "COMPLETED";
+    Set<String> PENDING_STATUS_CODE_LIST = Set.of("CONFIGURING", "PENDING", "REQUEUE_FED", "REQUEUE_HOLD", "REQUEUED");
+    Set<String> RUNNING_STATUS_CODE_LIST = Set.of("COMPLETING", "RUNNING", "RESIZING", "SIGNALING", "STAGE_OUT");
+    Set<String> SUSPENDED_STATUS_CODE_LIST = Set.of("RESV_DEL_HOLD", "REVOKED", "STOPPED", "SUSPENDED");
+    Set<String> DELETED_STATUS_CODE_LIST = Set.of("SPECIAL_EXIT", "CANCELLED", "TIMEOUT");
+    Set<String> ERROR_STATUS_CODE_LIST = Set.of("BOOT_FAIL", "DEADLINE", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY",
+            "PREEMPTED");
 
     /**
      * The actual mapping method expects the source object as parameter and returns the target object.
@@ -80,24 +77,22 @@ public interface SlurmJobMapper {
     }
 
     default JobState.Category defineCategory(final String state) {
-
-
-        if (state.equals(finishedStatusCode)) {
+        if (state.equals(FINISHED_STATUS_CODE)) {
             return JobState.Category.FINISHED;
         }
-        if (pendingStatusCodeList.contains(state)) {
+        if (PENDING_STATUS_CODE_LIST.contains(state)) {
             return JobState.Category.PENDING;
         }
-        if (runningStatusCodeList.contains(state)) {
+        if (RUNNING_STATUS_CODE_LIST.contains(state)) {
             return JobState.Category.RUNNING;
         }
-        if (suspendedStatusCodeList.contains(state)) {
+        if (SUSPENDED_STATUS_CODE_LIST.contains(state)) {
             return JobState.Category.SUSPENDED;
         }
-        if (deletedStatusCodeList.contains(state)) {
+        if (DELETED_STATUS_CODE_LIST.contains(state)) {
             return JobState.Category.DELETED;
         }
-        if (errorStatusCodeList.contains(state)) {
+        if (ERROR_STATUS_CODE_LIST.contains(state)) {
             return JobState.Category.ERROR;
         }
         return JobState.Category.UNKNOWN;

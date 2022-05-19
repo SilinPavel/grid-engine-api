@@ -26,6 +26,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
@@ -57,10 +58,7 @@ public final class SacctCommandParser {
                     .tresPerNode(jobData.get(1))
                     .minCpus(Integer.parseInt(jobData.get(2)))
                     .minTmpDisk(Integer.parseInt(jobData.get(3)))
-                    .endTime(!jobData.get(4).equals("N/A")
-                            ? DateUtils.tryParseStringToLocalDateTime(jobData.get(4),
-                            DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT))
-                            : null)
+                    .endTime(convertStringToTimeEntry(jobData.get(4)))
                     .features(jobData.get(5))
                     .groupName(jobData.get(6))
                     .overSubscribe(jobData.get(7))
@@ -99,16 +97,10 @@ public final class SacctCommandParser {
                     .partition(jobData.get(41))
                     .priorityLong(Long.parseLong(jobData.get(42)))
                     .nodeListReason(parseListFromString(jobData.get(43)))
-                    .startTime(!jobData.get(44).equals("N/A")
-                            ? DateUtils.tryParseStringToLocalDateTime(jobData.get(44),
-                            DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT))
-                            : null)
+                    .startTime(convertStringToTimeEntry(jobData.get(44)))
                     .state(jobData.get(45))
                     .uid(Integer.parseInt(jobData.get(46)))
-                    .submissionTime(!jobData.get(47).equals("N/A")
-                            ? DateUtils.tryParseStringToLocalDateTime(jobData.get(47),
-                            DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT))
-                            : null)
+                    .submissionTime(convertStringToTimeEntry(jobData.get(47)))
                     .licenses(jobData.get(48))
                     .coreSpec(jobData.get(49))
                     .schedNodes(jobData.get(50))
@@ -122,6 +114,12 @@ public final class SacctCommandParser {
 
     private static List<String> parseListFromString(final String stringList) {
         return List.of(stringList.split(COMMA));
+    }
+
+    private static LocalDateTime convertStringToTimeEntry(final String dateTime) {
+        return !dateTime.equals("N/A")
+                ? DateUtils.tryParseStringToLocalDateTime(dateTime, DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT))
+                : null;
     }
 
 }

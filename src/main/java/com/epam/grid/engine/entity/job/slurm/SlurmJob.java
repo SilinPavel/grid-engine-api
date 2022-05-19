@@ -114,7 +114,8 @@ public class SlurmJob {
      */
     private String qos;
     /**
-     * The reason a job is in its current state. See the JOB REASON CODES section below for more information.
+     * The reason a job is in its current state. See the <a href="https://slurm.schedmd.com/squeue.html#SECTION_JOB-REASON-CODES">JOB REASON CODES</a>
+     * section below for more information.
      */
     private String reason;
     /**
@@ -205,7 +206,7 @@ public class SlurmJob {
     private int contiguous;
     /**
      * Partition of the job or job step.
-     *
+     * <p>
      * According to <a href="https://slurm.schedmd.com/quickstart.html">documentation</a>, "The partitions
      * can be considered job queues, each of which has an assortment of constraints such as job size limit,
      * job time limit, users permitted to use it, etc."
