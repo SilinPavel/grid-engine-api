@@ -77,7 +77,7 @@ public class SlurmJobProvider implements JobProvider {
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
-                            @Value("${slurm.job.output-fields-count}") final int fieldsCount) {
+                            @Value("${slurm.job.output-fields-count:52}") final int fieldsCount) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
