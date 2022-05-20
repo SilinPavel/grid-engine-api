@@ -67,7 +67,15 @@ public class SlurmJobProvider implements JobProvider {
      */
     private final SimpleCmdExecutor simpleCmdExecutor;
 
+    /**
+     * Amount of fields with job data description.
+     */
     private final int fieldsCount;
+
+    /**
+     * Message, which returns when job was not found by id.
+     */
+    private final String jobIdNotFoundMessage;
 
     /**
      * An object that forms the structure of an executable command according to a template.
@@ -77,11 +85,14 @@ public class SlurmJobProvider implements JobProvider {
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
-                            @Value("${slurm.job.output-fields-count:52}") final int fieldsCount) {
+                            @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
+                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:[slurm_load_jobs error: Invalid job id specified]}")
+                            final String jobIdNotFoundMessage) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
         this.fieldsCount = fieldsCount;
+        this.jobIdNotFoundMessage = jobIdNotFoundMessage;
     }
 
     @Override
@@ -91,8 +102,9 @@ public class SlurmJobProvider implements JobProvider {
 
     @Override
     public Listing<Job> filterJobs(final JobFilter jobFilter) {
+        SacctCommandParser.filterCorrectJobIds(jobFilter.getIds());
         final CommandResult result = simpleCmdExecutor.execute(makeSqueueCommand(jobFilter));
-        if (result.getExitCode() != 0) {
+        if (result.getExitCode() != 0 && !result.getStdErr().toString().equals(jobIdNotFoundMessage)) {
             CommandsUtils.throwExecutionDetails(result);
         } else if (!result.getStdErr().isEmpty()) {
             log.warn(result.getStdErr().toString());
