@@ -42,8 +42,8 @@ public final class DateUtils {
     }
 
     public static LocalDateTime tryParseStringToLocalDateTime(final String dateString,
-                                                              final String formatter) {
-        return tryParseStringToLocalDateTime(dateString, DateTimeFormatter.ofPattern(formatter));
+                                                              final String timePattern) {
+        return tryParseStringToLocalDateTime(dateString, DateTimeFormatter.ofPattern(timePattern));
 
     }
 }

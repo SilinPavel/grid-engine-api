@@ -27,7 +27,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -118,7 +117,7 @@ public final class SacctCommandParser {
 
     private static LocalDateTime convertStringToTimeEntry(final String dateTime) {
         return !dateTime.equals("N/A")
-                ? DateUtils.tryParseStringToLocalDateTime(dateTime, DateTimeFormatter.ofPattern(SLURM_DATE_FORMAT))
+                ? DateUtils.tryParseStringToLocalDateTime(dateTime, SLURM_DATE_FORMAT)
                 : null;
     }
 
