@@ -45,7 +45,6 @@ public final class SacctCommandParser {
         final String[] jobArray = jobString.split(STANDARD_SLURM_DELIMETER);
         if (jobArray.length != fieldsCount) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "An error occurred during job data parsing");
-
         }
         return Arrays.stream(jobArray).collect(Collectors.toList());
     }
