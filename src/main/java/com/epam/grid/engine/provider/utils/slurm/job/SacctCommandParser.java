@@ -121,9 +121,11 @@ public final class SacctCommandParser {
     }
 
     public static void filterCorrectJobIds(final List<Integer> jobIds) {
-        jobIds.stream().filter(id -> id < 1).findFirst().ifPresent(id -> {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    "Only positive ids should be provided for filtration");
-        });
+        jobIds.stream().filter(id -> id < 1)
+                .findFirst()
+                .ifPresent(id -> {
+                    throw new GridEngineException(HttpStatus.BAD_REQUEST,
+                            "Only positive ids should be provided for filtration");
+                });
     }
 }
