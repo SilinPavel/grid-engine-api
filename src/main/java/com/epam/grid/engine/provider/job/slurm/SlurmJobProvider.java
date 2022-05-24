@@ -39,8 +39,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.thymeleaf.context.Context;
+import org.apache.commons.collections4.CollectionUtils;
 
 import java.io.InputStream;
 import java.util.List;
@@ -54,6 +54,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @ConditionalOnProperty(name = "grid.engine.type", havingValue = "SLURM")
 public class SlurmJobProvider implements JobProvider {
+    private static final int JOB_OUTPUT_HEADER_LINES_COUNT = 1;
     private static final String JOB_FILTER = "filter";
     private static final String SQUEUE_COMMAND = "squeue";
 
@@ -86,8 +87,7 @@ public class SlurmJobProvider implements JobProvider {
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
                             @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
-                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:[slurm_load_jobs error: Invalid job id specified]}")
-                            final String jobIdNotFoundMessage) {
+                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:[slurm_load_jobs error: Invalid job id specified]}") final String jobIdNotFoundMessage) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
@@ -127,9 +127,9 @@ public class SlurmJobProvider implements JobProvider {
     private Listing<Job> mapToJobListing(final List<String> stdOut) {
         if (stdOut.size() > 1) {
             return new Listing<>(stdOut.stream()
-                    .skip(1)
+                    .skip(JOB_OUTPUT_HEADER_LINES_COUNT)
                     .map(jobDataList -> SacctCommandParser.parseSlurmJob(jobDataList, fieldsCount))
-                    .filter(parsedJobList -> !CollectionUtils.isEmpty(parsedJobList))
+                    .filter(CollectionUtils::isNotEmpty)
                     .map(SacctCommandParser::mapJobDataToSlurmJob)
                     .map(jobMapper::slurmJobToJob)
                     .collect(Collectors.toList()));
