@@ -114,7 +114,7 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     private Listing<Job> mapToJobListing(final List<String> stdOut) {
-        if (stdOut.size() > 1) {
+        if (stdOut.size() > JOB_OUTPUT_HEADER_LINES_COUNT) {
             return new Listing<>(stdOut.stream()
                     .skip(JOB_OUTPUT_HEADER_LINES_COUNT)
                     .map(jobDataList -> SacctCommandParser.parseSlurmJob(jobDataList, fieldsCount))
