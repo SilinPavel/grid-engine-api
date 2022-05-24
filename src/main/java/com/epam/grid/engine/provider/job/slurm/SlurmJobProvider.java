@@ -87,7 +87,8 @@ public class SlurmJobProvider implements JobProvider {
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
                             @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
-                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:[slurm_load_jobs error: Invalid job id specified]}") final String jobIdNotFoundMessage) {
+                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:[slurm_load_jobs error: Invalid job id specified]}")
+                            final String jobIdNotFoundMessage) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
@@ -102,7 +103,7 @@ public class SlurmJobProvider implements JobProvider {
 
     @Override
     public Listing<Job> filterJobs(final JobFilter jobFilter) {
-        SacctCommandParser.filterCorrectJobIds(jobFilter.getIds());
+        SacctCommandParser.filterCorrectJobIds(jobFilter);
         final CommandResult result = simpleCmdExecutor.execute(makeSqueueCommand(jobFilter));
         if (result.getExitCode() != 0 && !jobNotFoundByIdError(result)) {
             CommandsUtils.throwExecutionDetails(result);
@@ -158,8 +159,7 @@ public class SlurmJobProvider implements JobProvider {
         return new Listing<>();
     }
 
-    private boolean jobNotFoundByIdError(CommandResult result) {
+    private boolean jobNotFoundByIdError(final CommandResult result) {
         return result.getStdErr().toString().equals(jobIdNotFoundMessage);
     }
-
 }

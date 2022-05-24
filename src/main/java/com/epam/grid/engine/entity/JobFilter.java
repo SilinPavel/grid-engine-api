@@ -50,4 +50,8 @@ public class JobFilter {
      * A list of job owners.
      */
     private List<String> owners;
+
+    public boolean idsIsNull() {
+        return ids != null;
+    }
 }
