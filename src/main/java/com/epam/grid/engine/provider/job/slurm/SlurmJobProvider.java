@@ -137,10 +137,6 @@ public class SlurmJobProvider implements JobProvider {
         return new Listing<>();
     }
 
-    private boolean jobNotFoundByIdError(CommandResult result) {
-        return result.getStdErr().toString().equals(jobIdNotFoundMessage);
-    }
-
     @Override
     public Job runJob(final JobOptions options) {
         throw new UnsupportedOperationException("Run job operation haven't implemented yet");
@@ -162,4 +158,7 @@ public class SlurmJobProvider implements JobProvider {
         throw new UnsupportedOperationException("Job log info file retrieving operation haven't implemented yet");
     }
 
+    private boolean jobNotFoundByIdError(CommandResult result) {
+        return result.getStdErr().toString().equals(jobIdNotFoundMessage);
+    }
 }
