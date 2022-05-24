@@ -104,7 +104,7 @@ public class SlurmJobProvider implements JobProvider {
     public Listing<Job> filterJobs(final JobFilter jobFilter) {
         SacctCommandParser.filterCorrectJobIds(jobFilter.getIds());
         final CommandResult result = simpleCmdExecutor.execute(makeSqueueCommand(jobFilter));
-        if (result.getExitCode() != 0 && !result.getStdErr().toString().equals(jobIdNotFoundMessage)) {
+        if (result.getExitCode() != 0 && !jobNotFoundByIdError(result)) {
             CommandsUtils.throwExecutionDetails(result);
         } else if (!result.getStdErr().isEmpty()) {
             log.warn(result.getStdErr().toString());
@@ -125,7 +125,7 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     private Listing<Job> mapToJobListing(final List<String> stdOut) {
-        if (stdOut.size() > 1) {
+        if (stdOut.size() > JOB_OUTPUT_HEADER_LINES_COUNT) {
             return new Listing<>(stdOut.stream()
                     .skip(JOB_OUTPUT_HEADER_LINES_COUNT)
                     .map(jobDataList -> SacctCommandParser.parseSlurmJob(jobDataList, fieldsCount))
@@ -135,6 +135,10 @@ public class SlurmJobProvider implements JobProvider {
                     .collect(Collectors.toList()));
         }
         return new Listing<>();
+    }
+
+    private boolean jobNotFoundByIdError(CommandResult result) {
+        return result.getStdErr().toString().equals(jobIdNotFoundMessage);
     }
 
     @Override
