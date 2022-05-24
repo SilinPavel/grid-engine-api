@@ -112,6 +112,27 @@ public class SlurmJobProvider implements JobProvider {
         return mapToJobListing(result.getStdOut());
     }
 
+    @Override
+    public Job runJob(final JobOptions options) {
+        throw new UnsupportedOperationException("Run job operation haven't implemented yet");
+    }
+
+    @Override
+    public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
+        throw new UnsupportedOperationException("Job deletion operation haven't implemented yet");
+    }
+
+    @Override
+    public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType, final int lines,
+                                    final boolean fromHead) {
+        throw new UnsupportedOperationException("Job log info retrieving operation haven't implemented yet");
+    }
+
+    @Override
+    public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
+        throw new UnsupportedOperationException("Job log info file retrieving operation haven't implemented yet");
+    }
+
     /**
      * Creates the structure of an executable command based on the passed filter.
      *
@@ -135,27 +156,6 @@ public class SlurmJobProvider implements JobProvider {
                     .collect(Collectors.toList()));
         }
         return new Listing<>();
-    }
-
-    @Override
-    public Job runJob(final JobOptions options) {
-        throw new UnsupportedOperationException("Run job operation haven't implemented yet");
-    }
-
-    @Override
-    public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
-        throw new UnsupportedOperationException("Job deletion operation haven't implemented yet");
-    }
-
-    @Override
-    public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType, final int lines,
-                                    final boolean fromHead) {
-        throw new UnsupportedOperationException("Job log info retrieving operation haven't implemented yet");
-    }
-
-    @Override
-    public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
-        throw new UnsupportedOperationException("Job log info file retrieving operation haven't implemented yet");
     }
 
     private boolean jobNotFoundByIdError(CommandResult result) {
