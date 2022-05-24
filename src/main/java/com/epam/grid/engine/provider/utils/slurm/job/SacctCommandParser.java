@@ -21,7 +21,7 @@ package com.epam.grid.engine.provider.utils.slurm.job;
 
 import com.epam.grid.engine.entity.job.slurm.SlurmJob;
 import com.epam.grid.engine.exception.GridEngineException;
-import com.epam.grid.engine.provider.utils.slurm.DateUtils;
+import com.epam.grid.engine.provider.utils.DateUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -44,7 +44,8 @@ public final class SacctCommandParser {
                                              final int fieldsCount) {
         final String[] jobArray = jobString.split(STANDARD_SLURM_DELIMETER);
         if (jobArray.length != fieldsCount) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "An error occurred during job data parsing");
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Job data field mismatch error. Expected "
+                    + fieldsCount + " fields, but " + jobArray.length + " were provided");
         }
         return Arrays.stream(jobArray).collect(Collectors.toList());
     }

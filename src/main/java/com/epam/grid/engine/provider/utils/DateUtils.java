@@ -17,7 +17,7 @@
  *
  */
 
-package com.epam.grid.engine.provider.utils.slurm;
+package com.epam.grid.engine.provider.utils;
 
 import com.epam.grid.engine.exception.GridEngineException;
 import lombok.AccessLevel;
