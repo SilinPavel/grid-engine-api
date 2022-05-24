@@ -161,4 +161,5 @@ public class SlurmJobProvider implements JobProvider {
     private boolean jobNotFoundByIdError(CommandResult result) {
         return result.getStdErr().toString().equals(jobIdNotFoundMessage);
     }
+
 }
