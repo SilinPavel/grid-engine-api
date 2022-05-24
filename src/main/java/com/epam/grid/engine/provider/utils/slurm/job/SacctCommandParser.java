@@ -29,7 +29,9 @@ import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.epam.grid.engine.utils.TextConstants.COMMA;
@@ -123,14 +125,14 @@ public final class SacctCommandParser {
     }
 
     public static void filterCorrectJobIds(final JobFilter jobFilter) {
-        if (jobFilter.idsIsNull() && jobFilter.getIds().size() > 0) {
-            final List<Integer> jobIds = jobFilter.getIds();
-            jobIds.stream().filter(id -> id < 1)
-                    .findFirst()
-                    .ifPresent(id -> {
-                        throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                                "Only positive ids should be provided for filtration");
-                    });
-        }
+        Optional.ofNullable(jobFilter).map(JobFilter::getIds)
+                .stream()
+                .flatMap(Collection::stream)
+                .filter(jobId -> jobId < 1)
+                .findFirst()
+                .ifPresent(id -> {
+                    throw new GridEngineException(HttpStatus.BAD_REQUEST,
+                            "Only positive ids should be provided for filtration");
+                });
     }
 }
