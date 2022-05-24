@@ -24,7 +24,7 @@ import com.epam.grid.engine.entity.healthcheck.GridEngineStatus;
 import com.epam.grid.engine.entity.healthcheck.HealthCheckInfo;
 import com.epam.grid.engine.entity.healthcheck.StatusInfo;
 import com.epam.grid.engine.exception.GridEngineException;
-import com.epam.grid.engine.provider.utils.slurm.DateUtils;
+import com.epam.grid.engine.provider.utils.DateUtils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
