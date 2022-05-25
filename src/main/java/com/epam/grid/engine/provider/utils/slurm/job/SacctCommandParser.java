@@ -19,6 +19,7 @@
 
 package com.epam.grid.engine.provider.utils.slurm.job;
 
+import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.job.slurm.SlurmJob;
 import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.utils.DateUtils;
@@ -28,7 +29,9 @@ import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.epam.grid.engine.utils.TextConstants.COMMA;
@@ -121,4 +124,15 @@ public final class SacctCommandParser {
                 : null;
     }
 
+    public static void filterCorrectJobIds(final JobFilter jobFilter) {
+        Optional.ofNullable(jobFilter).map(JobFilter::getIds)
+                .stream()
+                .flatMap(Collection::stream)
+                .filter(jobId -> jobId < 1)
+                .findFirst()
+                .ifPresent(id -> {
+                    throw new GridEngineException(HttpStatus.BAD_REQUEST,
+                            "Only positive ids should be provided for filtration");
+                });
+    }
 }
