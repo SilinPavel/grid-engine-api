@@ -33,6 +33,7 @@ import static com.epam.grid.engine.utils.TextConstants.SPACE;
  * This class performs the formation of the structure of the executed command
  * according to the template.
  */
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommandArgUtils {
 
