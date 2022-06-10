@@ -21,7 +21,7 @@ sbatch
 [# th:if="${options.workingDir != null}"]
     -D[(${options.workingDir})]
 [/]
-[# th:if="${logDir != null}"]
+[# th:if="${logDir != null && options.workingDir == null}"]
     -e[(${logDir})]%j.err
     -o[(${logDir})]%j.out
 [/]

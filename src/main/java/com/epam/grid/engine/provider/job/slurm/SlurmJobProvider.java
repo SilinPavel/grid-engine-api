@@ -73,7 +73,6 @@ public class SlurmJobProvider implements JobProvider {
     private static final String SBATCH_COMMAND = "sbatch";
     private static final String SUBMITTED_JOB_PATTERN = "Submitted batch job";
 
-
     /**
      * The MapStruct mapping mechanism used.
      */
