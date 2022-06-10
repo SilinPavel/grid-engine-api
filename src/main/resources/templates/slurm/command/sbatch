@@ -21,10 +21,6 @@ sbatch
 [# th:if="${options.workingDir != null}"]
     -D[(${options.workingDir})]
 [/]
-[# th:if="${logDir != null && options.workingDir == null}"]
-    -e[(${logDir})]%j.err
-    -o[(${logDir})]%j.out
-[/]
 [# th:if="${not #lists.isEmpty(options.arguments)}"]
     [# th:each="argument : ${options.arguments}"]
     [(${argument})]
