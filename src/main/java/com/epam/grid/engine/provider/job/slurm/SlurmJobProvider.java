@@ -186,7 +186,7 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     private void checkPriorityRange(final JobOptions options) {
-        Optional.ofNullable(options.getPriority()).stream()
+        Optional.of(options.getPriority()).stream()
             .filter(priority -> priority < 0)
             .findFirst()
             .ifPresent(
