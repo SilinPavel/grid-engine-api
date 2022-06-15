@@ -176,24 +176,15 @@ public class SlurmJobProvider implements JobProvider {
         if (!StringUtils.hasText(options.getCommand())) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Command should be specified!");
         }
-        checkPriorityRange(options);
+        if (options.getPriority() < 0) {
+            throw new UnsupportedOperationException("Priority should be between 0 and 4_294_967_294");
+        }
         if (options.getParallelEnvOptions() != null) {
             throw new UnsupportedOperationException("Parallel environment variables are not supported yet!");
         }
         if (options.isCanBeBinary()) {
             throw new UnsupportedOperationException("Scripts from command line are not supported yet!");
         }
-    }
-
-    private void checkPriorityRange(final JobOptions options) {
-        Optional.of(options.getPriority()).stream()
-            .filter(priority -> priority < 0)
-            .findFirst()
-            .ifPresent(
-                priority -> {
-                    throw new UnsupportedOperationException("Priority should be between 0 and 4_294_967_294");
-                }
-        );
     }
 
     private String getResultOfExecutedCommand(final CmdExecutor cmdExecutor, final String[] command) {
@@ -212,7 +203,7 @@ public class SlurmJobProvider implements JobProvider {
      */
     private String parseJobId(final String jobString) {
         return jobString.contains(SUBMITTED_JOB_PATTERN)
-                ? jobString.replace(SUBMITTED_JOB_PATTERN, "").trim()
+                ? jobString.replace(SUBMITTED_JOB_PATTERN, EMPTY_STRING).trim()
                 : EMPTY_STRING;
     }
 
