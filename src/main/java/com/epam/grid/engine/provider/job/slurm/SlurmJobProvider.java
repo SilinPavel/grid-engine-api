@@ -73,7 +73,6 @@ public class SlurmJobProvider implements JobProvider {
     private static final String ENV_VARIABLES = "envVariables";
     private static final String SBATCH_COMMAND = "sbatch";
     private static final String SUBMITTED_JOB_PATTERN = "Submitted batch job";
-    private static final String ALL_VARS_STRING = "ALL";
 
     /**
      * The MapStruct mapping mechanism used.
@@ -211,20 +210,9 @@ public class SlurmJobProvider implements JobProvider {
 
     private String extractEnvVariablesFromOptions(final JobOptions options) {
         final Optional<Map<String, String>> envVariables = Optional.ofNullable(options.getEnvVariables());
-        final boolean useAllEnvVars = options.isUseAllEnvVars();
-        final StringBuilder exportOptions = new StringBuilder();
-        if (useAllEnvVars && envVariables.isPresent()) {
-            exportOptions.append(ALL_VARS_STRING);
-            exportOptions.append(COMMA);
-            exportOptions.append(envVariables.map(this::getVariablesFromMap).get());
-        } else if (useAllEnvVars) {
-            exportOptions.append(ALL_VARS_STRING);
-        } else if (envVariables.isPresent()) {
-            exportOptions.append(envVariables.map(this::getVariablesFromMap).get());
-        } else {
-            return null;
-        }
-        return APOSTROPHE + exportOptions + APOSTROPHE;
+        return envVariables.isEmpty()
+                ? null
+                : envVariables.map(this::getVariablesFromMap).get();
     }
 
     private String getVariablesFromMap(final Map<String, String> varMap) {

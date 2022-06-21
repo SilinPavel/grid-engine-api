@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
-import static com.epam.grid.engine.utils.TextConstants.APOSTROPHE;
 
 /**
  * This class performs the formation of the structure of the executed command
@@ -38,6 +37,7 @@ import static com.epam.grid.engine.utils.TextConstants.APOSTROPHE;
 public class CommandArgUtils {
 
     private static final String DELIMITERS = " \\" + System.lineSeparator();
+    private static final String APOSTROPHE = "\"";
 
     /**
      * This method forms a command structure from a string command.
