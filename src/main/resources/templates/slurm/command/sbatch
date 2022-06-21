@@ -1,12 +1,6 @@
 sbatch
-[# th:if="${options.useAllEnvVars && envVariables != null}"]
-    --export=ALL,[(${envVariables})]
-[/]
-[# th:if="${not options.useAllEnvVars && envVariables != null}"]
-    --export=[(${envVariables})]
-[/]
-[# th:if="${options.useAllEnvVars && envVariables == null}"]
-    --export=ALL
+[# th:if="${envVariables != null}"]
+    --export [(${envVariables})]
 [/]
 [# th:if="${options.priority != null && options.priority != 0}"]
     --priority=[(${options.priority})]

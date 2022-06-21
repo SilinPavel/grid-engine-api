@@ -56,6 +56,7 @@ import java.util.stream.Collectors;
 import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 import static com.epam.grid.engine.utils.TextConstants.COMMA;
 import static com.epam.grid.engine.utils.TextConstants.EQUAL_SIGN;
+import static com.epam.grid.engine.utils.TextConstants.APOSTROPHE;
 
 /**
  * This class performs various actions with jobs for the SLURM engine.
@@ -72,6 +73,7 @@ public class SlurmJobProvider implements JobProvider {
     private static final String ENV_VARIABLES = "envVariables";
     private static final String SBATCH_COMMAND = "sbatch";
     private static final String SUBMITTED_JOB_PATTERN = "Submitted batch job";
+    private static final String ALL_VARS_STRING = "ALL";
 
     /**
      * The MapStruct mapping mechanism used.
@@ -209,7 +211,20 @@ public class SlurmJobProvider implements JobProvider {
 
     private String extractEnvVariablesFromOptions(final JobOptions options) {
         final Optional<Map<String, String>> envVariables = Optional.ofNullable(options.getEnvVariables());
-        return envVariables.map(this::getVariablesFromMap).orElse(null);
+        final boolean useAllEnvVars = options.isUseAllEnvVars();
+        final StringBuilder exportOptions = new StringBuilder();
+        if (useAllEnvVars && envVariables.isPresent()) {
+            exportOptions.append(ALL_VARS_STRING);
+            exportOptions.append(COMMA);
+            exportOptions.append(envVariables.map(this::getVariablesFromMap).get());
+        } else if (useAllEnvVars) {
+            exportOptions.append(ALL_VARS_STRING);
+        } else if (envVariables.isPresent()) {
+            exportOptions.append(envVariables.map(this::getVariablesFromMap).get());
+        } else {
+            return null;
+        }
+        return APOSTROPHE + exportOptions + APOSTROPHE;
     }
 
     private String getVariablesFromMap(final Map<String, String> varMap) {
