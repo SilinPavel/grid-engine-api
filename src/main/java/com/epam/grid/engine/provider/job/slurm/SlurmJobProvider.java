@@ -39,6 +39,7 @@ import com.epam.grid.engine.provider.job.JobProvider;
 import com.epam.grid.engine.provider.utils.CommandsUtils;
 import com.epam.grid.engine.provider.utils.slurm.job.SacctCommandParser;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -50,13 +51,13 @@ import org.apache.commons.collections4.CollectionUtils;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 import static com.epam.grid.engine.utils.TextConstants.COMMA;
 import static com.epam.grid.engine.utils.TextConstants.EQUAL_SIGN;
-import static com.epam.grid.engine.utils.TextConstants.APOSTROPHE;
 
 /**
  * This class performs various actions with jobs for the SLURM engine.
@@ -72,7 +73,7 @@ public class SlurmJobProvider implements JobProvider {
     private static final String LOG_DIR = "logDir";
     private static final String ENV_VARIABLES = "envVariables";
     private static final String SBATCH_COMMAND = "sbatch";
-    private static final String SUBMITTED_JOB_PATTERN = "Submitted batch job";
+    private static final String SUBMITTED_JOB_PATTERN = "Submitted batch job (\\d+).*";
 
     /**
      * The MapStruct mapping mechanism used.
@@ -203,16 +204,15 @@ public class SlurmJobProvider implements JobProvider {
      * @return JobID or an empty string.
      */
     private String parseJobId(final String jobString) {
-        return jobString.contains(SUBMITTED_JOB_PATTERN)
-                ? jobString.replace(SUBMITTED_JOB_PATTERN, EMPTY_STRING).trim()
+        final Pattern pattern = Pattern.compile(SUBMITTED_JOB_PATTERN);
+        final Matcher matcher = pattern.matcher(jobString);
+        return matcher.find()
+                ? matcher.group(1)
                 : EMPTY_STRING;
     }
 
     private String extractEnvVariablesFromOptions(final JobOptions options) {
-        final Optional<Map<String, String>> envVariables = Optional.ofNullable(options.getEnvVariables());
-        return envVariables.isEmpty()
-                ? null
-                : envVariables.map(this::getVariablesFromMap).get();
+        return getVariablesFromMap(MapUtils.emptyIfNull(options.getEnvVariables()));
     }
 
     private String getVariablesFromMap(final Map<String, String> varMap) {
