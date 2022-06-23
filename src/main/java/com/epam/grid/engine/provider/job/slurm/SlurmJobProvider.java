@@ -73,7 +73,7 @@ public class SlurmJobProvider implements JobProvider {
     private static final String LOG_DIR = "logDir";
     private static final String ENV_VARIABLES = "envVariables";
     private static final String SBATCH_COMMAND = "sbatch";
-    private static final String SUBMITTED_JOB_PATTERN = "Submitted batch job (\\d+).*";
+    private static final Pattern SUBMITTED_JOB_PATTERN = Pattern.compile("Submitted batch job (\\d+).*");
 
     /**
      * The MapStruct mapping mechanism used.
@@ -179,7 +179,7 @@ public class SlurmJobProvider implements JobProvider {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Command should be specified!");
         }
         if (options.getPriority() < 0) {
-            throw new UnsupportedOperationException("Priority should be between 0 and 4_294_967_294");
+            throw new IllegalArgumentException("Priority should be between 0 and 4_294_967_294");
         }
         if (options.getParallelEnvOptions() != null) {
             throw new UnsupportedOperationException("Parallel environment variables are not supported yet!");
@@ -204,8 +204,7 @@ public class SlurmJobProvider implements JobProvider {
      * @return JobID or an empty string.
      */
     private String parseJobId(final String jobString) {
-        final Pattern pattern = Pattern.compile(SUBMITTED_JOB_PATTERN);
-        final Matcher matcher = pattern.matcher(jobString);
+        final Matcher matcher = SUBMITTED_JOB_PATTERN.matcher(jobString);
         return matcher.find()
                 ? matcher.group(1)
                 : EMPTY_STRING;
@@ -237,7 +236,6 @@ public class SlurmJobProvider implements JobProvider {
                         .build())
                 .build();
     }
-
 
     /**
      * Creates the structure of an executable command based on the passed filter.
