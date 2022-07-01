@@ -49,15 +49,21 @@ import org.thymeleaf.context.Context;
 import org.apache.commons.collections4.CollectionUtils;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
+import static com.epam.grid.engine.provider.utils.CommandsUtils.mergeOutputLines;
+import static com.epam.grid.engine.utils.TextConstants.COLON;
 import static com.epam.grid.engine.utils.TextConstants.COMMA;
+import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 import static com.epam.grid.engine.utils.TextConstants.EQUAL_SIGN;
+import static com.epam.grid.engine.utils.TextConstants.NEW_LINE_DELIMITER;
 
 /**
  * This class performs various actions with jobs for the SLURM engine.
@@ -68,11 +74,17 @@ import static com.epam.grid.engine.utils.TextConstants.EQUAL_SIGN;
 public class SlurmJobProvider implements JobProvider {
     private static final int JOB_OUTPUT_HEADER_LINES_COUNT = 1;
     private static final String JOB_FILTER = "filter";
+    private static final String SCANCEL_COMMAND = "scancel";
     private static final String SQUEUE_COMMAND = "squeue";
+    private static final String WHOAMI_COMMAND = "whoami";
     private static final String OPTIONS = "options";
     private static final String LOG_DIR = "logDir";
     private static final String ENV_VARIABLES = "envVariables";
     private static final String SBATCH_COMMAND = "sbatch";
+    private static final String START_TERMINATING_JOB_PREFIX = "scancel: Terminating job";
+    private static final String KILL_JOB_ERROR_PREFIX = "scancel: error: Kill job error on job id";
+    private static final int JOB_ID_START_POSITION = START_TERMINATING_JOB_PREFIX.length() + 1;
+    private static final int ERROR_JOB_ID_POSITION = KILL_JOB_ERROR_PREFIX.length() + 1;
     private static final Pattern SUBMITTED_JOB_PATTERN = Pattern.compile("Submitted batch job (\\d+).*");
 
     /**
@@ -109,10 +121,12 @@ public class SlurmJobProvider implements JobProvider {
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
-                            @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
+                            @Value("${slurm.job.output-fields-count:52}")
+                            final int fieldsCount,
                             @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:[slurm_load_jobs error: Invalid job id specified]}")
                             final String jobIdNotFoundMessage,
-                            @Value("${job.log.dir}") final String logDir) {
+                            @Value("${job.log.dir}")
+                            final String logDir) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
@@ -144,9 +158,32 @@ public class SlurmJobProvider implements JobProvider {
         return buildNewJob(getResultOfExecutedCommand(simpleCmdExecutor, makeSbatchCommand(options)));
     }
 
+    /**
+     * Deletes the job being performed according to the specified parameters.
+     *
+     * @param deleteJobFilter Search parameters for the job being deleted.
+     * @return Information about the deleted job.
+     */
     @Override
     public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
-        throw new UnsupportedOperationException("Job deletion operation haven't implemented yet");
+        if (!StringUtils.hasText(deleteJobFilter.getUser()) && deleteJobFilter.getId() == null) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST,
+                    String.format("Incorrect filling in %s. Either `id` or `user` should be specified for job removal!",
+                            deleteJobFilter));
+        }
+        if (deleteJobFilter.getId() != null && deleteJobFilter.getId() <= 0) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST,
+                    String.format("Id specified in %s for job removal is invalid!", deleteJobFilter));
+        }
+        final String deletingUser = Optional.ofNullable(deleteJobFilter.getUser()).orElseGet(this::getCurrentUser);
+        final CommandResult result = simpleCmdExecutor.execute(makeScancelCommand(deleteJobFilter));
+        if (result.getExitCode() == 0) {
+            return new DeletedJobInfo(
+                    parseDeletedJobId(result.getStdErr()),
+                    deletingUser);
+        }
+        throw new GridEngineException(HttpStatus.NOT_FOUND, mergeOutputLines(result.getStdOut())
+                + NEW_LINE_DELIMITER + mergeOutputLines(result.getStdErr()));
     }
 
     @Override
@@ -264,5 +301,47 @@ public class SlurmJobProvider implements JobProvider {
 
     private boolean jobNotFoundByIdError(final CommandResult result) {
         return result.getStdErr().toString().equals(jobIdNotFoundMessage);
+    }
+
+    /**
+     * This method creates the structure of the executed job deletion command based on the passed options.
+     *
+     * @param filter User-defined conditions for searching for deleted jobs.
+     * @return The structure of an executable command.
+     */
+    private String[] makeScancelCommand(final DeleteJobFilter filter) {
+        final Context context = new Context();
+        context.setVariable(JOB_FILTER, filter);
+        return commandCompiler.compileCommand(getProviderType(), SCANCEL_COMMAND, context);
+    }
+
+    private List<Long> parseDeletedJobId(final List<String> stdOut) {
+        final Map<String, String> errorDeletingJobs = stdOut.stream()
+                .filter((s) -> s.startsWith(KILL_JOB_ERROR_PREFIX))
+                .collect(Collectors.toMap(
+                            (s) -> s.substring(ERROR_JOB_ID_POSITION, s.indexOf(COLON, ERROR_JOB_ID_POSITION)),
+                            Function.identity()));
+
+        final List<Long> deletedJobs = stdOut.stream()
+                .filter((s) -> s.startsWith(START_TERMINATING_JOB_PREFIX))
+                .map((s) -> s.substring(JOB_ID_START_POSITION))
+                .filter((id) -> !errorDeletingJobs.containsKey(id))
+                .map(Long::valueOf)
+                .collect(Collectors.toList());
+
+        if (deletedJobs.isEmpty()) {
+            throw new GridEngineException(HttpStatus.NOT_FOUND,
+                    mergeOutputLines(new ArrayList<>(errorDeletingJobs.values())));
+        }
+        return deletedJobs;
+    }
+
+    private String getCurrentUser() {
+        final CommandResult result = simpleCmdExecutor.execute(WHOAMI_COMMAND);
+        if (result.getExitCode() == 0) {
+            return result.getStdOut().get(0);
+        }
+        throw new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR, mergeOutputLines(result.getStdOut())
+                + NEW_LINE_DELIMITER + mergeOutputLines(result.getStdErr()));
     }
 }

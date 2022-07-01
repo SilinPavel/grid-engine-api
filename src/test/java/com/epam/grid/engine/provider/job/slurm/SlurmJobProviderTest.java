@@ -25,6 +25,8 @@ import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.Listing;
+import com.epam.grid.engine.entity.job.DeleteJobFilter;
+import com.epam.grid.engine.entity.job.DeletedJobInfo;
 import com.epam.grid.engine.entity.job.Job;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.entity.job.JobState;
@@ -35,6 +37,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mockito;
@@ -151,6 +155,26 @@ public class SlurmJobProviderTest {
     private static final String JOB_NAME4 = "newSlurmJob";
     private static final String JOB_PARTITION = "normal";
     private static final String JOB_WORK_DIR = "/data/";
+
+    private static final String SCANCEL = "scancel";
+    private static final String USER_KEY = "-u";
+    private static final String VERBOSE_KEY = "-v";
+    private static final String WHOAMI_COMMAND = "whoami";
+    private static final String SOME_USER_NAME = "user";
+    private static final long SOME_CORRECT_JOB_ID = 5L;
+    private static final long ONE_MORE_CORRECT_JOB_ID = 15L;
+    private static final long SOME_WRONG_JOB_ID = 0L;
+    private static final String SOME_CORRECT_JOB_ID_STRING = Long.toString(SOME_CORRECT_JOB_ID);
+    private static final String TERMINATING_JOB_PREFIX = "scancel: Terminating job ";
+    private static final List<String> DELETE_ALL_USER_JOBS_STDOUT =
+            List.of("scancel: Consumable Resources (CR) Node Selection plugin loaded with argument 17",
+                    "scancel: Cray/Aries node selection plugin loaded",
+                    "scancel: Linear node selection plugin loaded with argument 17",
+                    "scancel: select/cons_tres loaded with argument 17",
+                    TERMINATING_JOB_PREFIX + SOME_CORRECT_JOB_ID_STRING,
+                    "scancel: error: Kill job error on job id " + SOME_CORRECT_JOB_ID_STRING + ": some reason",
+                    TERMINATING_JOB_PREFIX + ONE_MORE_CORRECT_JOB_ID);
+    private static final List<Long> DELETED_USER_JOBS = List.of(ONE_MORE_CORRECT_JOB_ID);
 
     @Autowired
     private SlurmJobProvider slurmJobProvider;
@@ -526,6 +550,53 @@ public class SlurmJobProviderTest {
                 contextCaptor.capture());
 
         Assertions.assertEquals(expectedFilteredJob, result);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(longs = {SOME_WRONG_JOB_ID})
+    public void shouldThrowWhenPassWrongRequestToDeleteJob(final Long jobId) {
+        final DeleteJobFilter deleteJobFilter = new DeleteJobFilter(false, jobId, null);
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(deleteJobFilter));
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideValidNameCasesForRequestsToDeleteJob")
+    public void shouldReturnCorrectUserNameAndJobIdWhenDeleteJob(final String expectedUserName,
+                                                                 final String passedUserName,
+                                                                 final String... commandArgs) {
+        final CommandResult whoamiCommandResult =
+                new CommandResult(Collections.singletonList(SLURM_USER), 0, EMPTY_LIST);
+        mockCommandCompilation(WHOAMI_COMMAND, whoamiCommandResult, WHOAMI_COMMAND);
+
+        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0,
+                Collections.singletonList(TERMINATING_JOB_PREFIX + SOME_CORRECT_JOB_ID_STRING));
+        mockCommandCompilation(SCANCEL, scancelCommandResult, commandArgs);
+
+        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, SOME_CORRECT_JOB_ID, passedUserName);
+        final DeletedJobInfo deletedJobInfoResult = slurmJobProvider.deleteJob(testDeleteJobFilter);
+        Assertions.assertEquals(expectedUserName, deletedJobInfoResult.getUser());
+        Assertions.assertEquals(Collections.singletonList(SOME_CORRECT_JOB_ID), deletedJobInfoResult.getId());
+    }
+
+    static Stream<Arguments> provideValidNameCasesForRequestsToDeleteJob() {
+        return Stream.of(
+                Arguments.of(SLURM_USER, null,
+                    (Object) new String[] {SCANCEL, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
+                Arguments.of(SOME_USER_NAME, SOME_USER_NAME,
+                    (Object) new String[] {SCANCEL, VERBOSE_KEY, USER_KEY, SOME_USER_NAME, SOME_CORRECT_JOB_ID_STRING})
+        );
+    }
+
+    @Test
+    public void shouldReturnCorrectListDeletedJobs() {
+        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0, DELETE_ALL_USER_JOBS_STDOUT);
+        mockCommandCompilation(SCANCEL, scancelCommandResult, SCANCEL, VERBOSE_KEY, USER_KEY, SOME_USER_NAME);
+
+        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
+        final DeletedJobInfo deletedJobInfoResult = slurmJobProvider.deleteJob(testDeleteJobFilter);
+        Assertions.assertEquals(SOME_USER_NAME, deletedJobInfoResult.getUser());
+        Assertions.assertEquals(DELETED_USER_JOBS, deletedJobInfoResult.getId());
     }
 
     private static JobOptions.JobOptionsBuilder getSimpleJobCommand() {
