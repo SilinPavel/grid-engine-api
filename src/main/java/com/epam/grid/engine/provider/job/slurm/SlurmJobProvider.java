@@ -39,6 +39,7 @@ import com.epam.grid.engine.provider.job.JobProvider;
 import com.epam.grid.engine.provider.utils.CommandsUtils;
 import com.epam.grid.engine.provider.utils.slurm.job.SacctCommandParser;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -49,21 +50,18 @@ import org.thymeleaf.context.Context;
 import org.apache.commons.collections4.CollectionUtils;
 
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.epam.grid.engine.provider.utils.CommandsUtils.mergeOutputLines;
 import static com.epam.grid.engine.utils.TextConstants.COLON;
 import static com.epam.grid.engine.utils.TextConstants.COMMA;
 import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 import static com.epam.grid.engine.utils.TextConstants.EQUAL_SIGN;
-import static com.epam.grid.engine.utils.TextConstants.NEW_LINE_DELIMITER;
 
 /**
  * This class performs various actions with jobs for the SLURM engine.
@@ -146,7 +144,7 @@ public class SlurmJobProvider implements JobProvider {
         if (result.getExitCode() != 0 && !jobNotFoundByIdError(result)) {
             CommandsUtils.throwExecutionDetails(result);
         } else if (!result.getStdErr().isEmpty()) {
-            log.warn(result.getStdErr().toString());
+            log.warn(CommandsUtils.mergeOutputLines(result.getStdErr()));
         }
         return mapToJobListing(result.getStdOut());
     }
@@ -175,33 +173,36 @@ public class SlurmJobProvider implements JobProvider {
                     String.format("Id specified in %s for job removal is invalid!", deleteJobFilter));
         }
 
-        final String deletingUser;
+        final String jobOwner;
         if (StringUtils.hasText(deleteJobFilter.getUser())) {
-            deletingUser = deleteJobFilter.getUser();
+            jobOwner = deleteJobFilter.getUser();
         } else {
-            final JobFilter jobFilter = JobFilter.builder()
-                    .ids(Collections.singletonList(deleteJobFilter.getId()))
-                    .build();
-            final Listing<Job> jobListing = filterJobs(jobFilter);
-
-            if (jobListing.getElements() == null) {
-                throw new GridEngineException(HttpStatus.NOT_FOUND,
-                        String.format("Id specified in %s for job removal not found!", deleteJobFilter));
-            }
-            deletingUser = jobListing.getElements().get(0).getOwner();
+            jobOwner = getJobById(deleteJobFilter.getId()).getOwner();
         }
 
         final CommandResult result = simpleCmdExecutor.execute(makeScancelCommand(deleteJobFilter));
-        if (result.getExitCode() == 0) {
-            final List<Long> deletedJobIds = parseDeletedJobId(result.getStdErr());
-            if (!deletedJobIds.isEmpty()) {
-                return new DeletedJobInfo(
-                        deletedJobIds,
-                        deletingUser);
-            }
+        if (result.getExitCode() != 0) {
+            CommandsUtils.throwExecutionDetails(result, HttpStatus.NOT_FOUND);
         }
-        throw new GridEngineException(HttpStatus.NOT_FOUND, mergeOutputLines(result.getStdOut())
-                + NEW_LINE_DELIMITER + mergeOutputLines(result.getStdErr()));
+
+        final Set<String> errorDeletingJobs = result.getStdErr().stream()
+                .filter((s) -> s.startsWith(KILL_JOB_ERROR_PREFIX))
+                .map((s) -> s.substring(ERROR_JOB_ID_POSITION, s.indexOf(COLON, ERROR_JOB_ID_POSITION)))
+                .collect(Collectors.toSet());
+
+        final List<Long> deletedJobIds = result.getStdErr().stream()
+                .filter((s) -> s.startsWith(START_TERMINATING_JOB_PREFIX))
+                .map((s) -> s.substring(JOB_ID_START_POSITION))
+                .filter((id) -> !errorDeletingJobs.contains(id))
+                .map(Long::valueOf)
+                .collect(Collectors.toList());
+
+        if (deletedJobIds.isEmpty()) {
+            CommandsUtils.throwExecutionDetails(result, HttpStatus.NOT_FOUND);
+        }
+        return new DeletedJobInfo(
+                deletedJobIds,
+                jobOwner);
     }
 
     @Override
@@ -318,10 +319,8 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     private boolean jobNotFoundByIdError(final CommandResult result) {
-        if (!result.getStdErr().isEmpty()) {
-            return result.getStdErr().get(0).equals(jobIdNotFoundMessage);
-        }
-        return false;
+        return ListUtils.emptyIfNull(result.getStdErr()).stream()
+                .anyMatch(s -> !s.equals(jobIdNotFoundMessage));
     }
 
     /**
@@ -336,24 +335,14 @@ public class SlurmJobProvider implements JobProvider {
         return commandCompiler.compileCommand(getProviderType(), SCANCEL_COMMAND, context);
     }
 
-    private List<Long> parseDeletedJobId(final List<String> stdOut) {
-        final Map<String, String> errorDeletingJobs = stdOut.stream()
-                .filter((s) -> s.startsWith(KILL_JOB_ERROR_PREFIX))
-                .collect(Collectors.toMap(
-                            (s) -> s.substring(ERROR_JOB_ID_POSITION, s.indexOf(COLON, ERROR_JOB_ID_POSITION)),
-                            Function.identity()));
+    private Job getJobById(final Long id) {
+        final JobFilter jobFilter = JobFilter.builder()
+                .ids(Collections.singletonList(id))
+                .build();
 
-        final List<Long> deletedJobs = stdOut.stream()
-                .filter((s) -> s.startsWith(START_TERMINATING_JOB_PREFIX))
-                .map((s) -> s.substring(JOB_ID_START_POSITION))
-                .filter((id) -> !errorDeletingJobs.containsKey(id))
-                .map(Long::valueOf)
-                .collect(Collectors.toList());
-
-        if (deletedJobs.isEmpty()) {
-            throw new GridEngineException(HttpStatus.NOT_FOUND,
-                    mergeOutputLines(new ArrayList<>(errorDeletingJobs.values())));
-        }
-        return deletedJobs;
+        return ListUtils.emptyIfNull(filterJobs(jobFilter).getElements()).stream()
+                .findFirst()
+                .orElseThrow(() -> new GridEngineException(HttpStatus.NOT_FOUND,
+                        String.format("Id specified in %d for job removal not found!", id)));
     }
 }
