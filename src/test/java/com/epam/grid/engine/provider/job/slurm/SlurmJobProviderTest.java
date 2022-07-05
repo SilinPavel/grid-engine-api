@@ -68,7 +68,7 @@ public class SlurmJobProviderTest {
     private static final String OWNER_FILTRATION_KEY = "-u";
     private static final String STATE_FILTRATION_KEY = "-t";
     private static final String JOB_LIST_KEY = "-j";
-    private static final String NAME_FILTRATION_KEY = "-n";
+    private static final String JOB_NAME_FILTRATION_KEY = "-n";
     private static final String PENDING_STATUS_CODE = "PD";
     private static final String RUNNING_STATUS_CODE = "R";
     private static final String SUSPENDED_STATUS_CODE = "S";
@@ -85,6 +85,7 @@ public class SlurmJobProviderTest {
     private static final String JOB_PRIORITY1 = "0.99998474121093";
     private static final String JOB_PRIORITY2 = "0.99998474074527";
     private static final String JOB_PRIORITY3 = "0.00000000000000";
+    private static final int SOME_WRONG_SENT_PRIORITY = -10;
 
     private static final long SOME_CORRECT_JOB_ID = 5L;
     private static final long SECOND_CORRECT_JOB_ID = 10L;
@@ -132,9 +133,9 @@ public class SlurmJobProviderTest {
     private static final String SBATCH = "sbatch";
     private static final String ENV_VARIABLES = "envVariables";
     private static final String ENV_VAR_KEY = "parameter1";
-    private static final String ENV_VAR_VALUE = "parameter1Value";
-    private static final String ENV_VAR_MAP_ENTRY = "parameter1=parameter1Value";
-    private static final String ENV_VAR_FLAG = "--export=";
+    private static final String ENV_VAR_VALUE = "parameter one value with spaces";
+    private static final String ENV_VAR_MAP_ENTRY = "parameter1=parameter one value with spaces";
+    private static final String ENV_VAR_FLAG = "--export ";
     private static final String ENV_VAR_MAP_ONLY_KEY = "parameter1";
     private static final String JOB_PRIORITY4 = "9999";
     private static final String JOB_PARTITION = "normal";
@@ -288,7 +289,7 @@ public class SlurmJobProviderTest {
                 .stdErr(EMPTY_LIST)
                 .build();
 
-        mockCommandCompilation(SQUEUE_COMMAND, commandResult, ALL_FORMAT, NAME_FILTRATION_KEY, JOB_NAME1);
+        mockCommandCompilation(SQUEUE_COMMAND, commandResult, ALL_FORMAT, JOB_NAME_FILTRATION_KEY, JOB_NAME1);
         final Listing<Job> result = slurmJobProvider.filterJobs(jobFilter);
         Mockito.verify(mockCommandCompiler).compileCommand(engineTypeCaptor.capture(),
                 commandCaptor.capture(),
@@ -418,9 +419,22 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideUnsupportedJobOptions() {
         return Stream.of(
-                Arguments.of(JobOptions.builder().priority(-100)
-                        .command(JOB_NAME1).build()),
                 Arguments.of(JobOptions.builder().parallelEnvOptions(new ParallelEnvOptions(EMPTY_STRING, 1, 10))
+                        .command(JOB_NAME1).build())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideIllegalArgumentJobOptions")
+    public void shouldThrowIllegalArgumentExceptionMakingSbatchCommand(final JobOptions jobOptions) {
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.runJob(jobOptions));
+    }
+
+    static Stream<Arguments> provideIllegalArgumentJobOptions() {
+        return Stream.of(
+                Arguments.of(JobOptions.builder()
+                        .command(EMPTY_STRING).build()),
+                Arguments.of(JobOptions.builder().priority(SOME_WRONG_SENT_PRIORITY)
                         .command(JOB_NAME1).build())
         );
     }
