@@ -393,7 +393,6 @@ public class SlurmJobProviderTest {
                 .build();
     }
 
-
     @ParameterizedTest
     @MethodSource("provideInvalidJobOptions")
     public void shouldThrowGridEngineExceptionMakingSbatchCommand(final JobOptions jobOptions) {
