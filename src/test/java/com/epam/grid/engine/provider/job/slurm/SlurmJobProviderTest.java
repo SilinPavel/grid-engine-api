@@ -49,8 +49,9 @@ import org.thymeleaf.context.Context;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 
@@ -85,7 +86,7 @@ public class SlurmJobProviderTest {
     private static final String JOB_PRIORITY1 = "0.99998474121093";
     private static final String JOB_PRIORITY2 = "0.99998474074527";
     private static final String JOB_PRIORITY3 = "0.00000000000000";
-    private static final int SOME_WRONG_SENT_PRIORITY = -10;
+    private static final long SOME_WRONG_SENT_PRIORITY = -10L;
 
     private static final long SOME_CORRECT_JOB_ID = 5L;
     private static final long SECOND_CORRECT_JOB_ID = 10L;
@@ -448,12 +449,14 @@ public class SlurmJobProviderTest {
 
     @ParameterizedTest
     @MethodSource("provideValidEnvVariables")
-    public void shouldMakeValidEnvVariables(final JobOptions.JobOptionsBuilder jobOptionsBuilder,
-                                            final String expectedEnvVariables, final String[] command) {
-        final JobOptions jobOptions = jobOptionsBuilder.build();
-        final CommandResult commandResult = new CommandResult();
+    public void shouldMakeValidEnvVariables(final Map<String, String> jobOptionsEnvironment, final String[] command,
+                                            final String expectedEnvVariables) {
+        final JobOptions jobOptions = JobOptions.builder()
+                .command(JOB_NAME1)
+                .envVariables(jobOptionsEnvironment)
+                .build();
 
-        jobOptions.setCommand(JOB_NAME1);
+        final CommandResult commandResult = new CommandResult();
         commandResult.setStdOut(Collections.singletonList(TEXT_JOB_SUBMITTED));
         commandResult.setStdErr(EMPTY_LIST);
 
@@ -468,10 +471,10 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideValidEnvVariables() {
         return Stream.of(
-                Arguments.of(getSimpleJobCommand().envVariables(Collections.singletonMap(ENV_VAR_KEY, ENV_VAR_VALUE)),
-                        ENV_VAR_MAP_ENTRY, new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_MAP_ENTRY, JOB_NAME1}),
-                Arguments.of(getSimpleJobCommand().envVariables(Collections.singletonMap(ENV_VAR_KEY, EMPTY_STRING)),
-                        ENV_VAR_MAP_ONLY_KEY, new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_KEY, JOB_NAME1})
+                Arguments.of(Collections.singletonMap(ENV_VAR_KEY, ENV_VAR_VALUE),
+                        new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_MAP_ENTRY, JOB_NAME1}, ENV_VAR_MAP_ENTRY),
+                Arguments.of(Collections.singletonMap(ENV_VAR_KEY, EMPTY_STRING),
+                        new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_KEY, JOB_NAME1}, ENV_VAR_MAP_ONLY_KEY)
         );
     }
 
@@ -611,10 +614,6 @@ public class SlurmJobProviderTest {
 
         final DeleteJobFilter deleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
         Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(deleteJobFilter));
-    }
-
-    private static JobOptions.JobOptionsBuilder getSimpleJobCommand() {
-        return JobOptions.builder().command(JOB_NAME1);
     }
 
     private static Job correctBuild() {

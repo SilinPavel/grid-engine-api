@@ -200,9 +200,7 @@ public class SlurmJobProvider implements JobProvider {
         if (deletedJobIds.isEmpty()) {
             CommandsUtils.throwExecutionDetails(result, HttpStatus.NOT_FOUND);
         }
-        return new DeletedJobInfo(
-                deletedJobIds,
-                jobOwner);
+        return new DeletedJobInfo(deletedJobIds, jobOwner);
     }
 
     @Override
@@ -234,7 +232,7 @@ public class SlurmJobProvider implements JobProvider {
         if (!StringUtils.hasText(options.getCommand())) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Command should be specified!");
         }
-        if (options.getPriority() < 0) {
+        if (options.getPriority() != null && options.getPriority() < 0) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and 4_294_967_294");
         }
         if (options.getParallelEnvOptions() != null) {
