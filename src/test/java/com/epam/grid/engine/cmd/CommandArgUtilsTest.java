@@ -49,9 +49,9 @@ class CommandArgUtilsTest {
                                 + "\n\n    \n    --some=5 --comment=\"some commentary in a few words  \\\\\\\" and a f"
                                 + "ew more words\"\n    \n\n/data/test.py\n",
                         new String[]{"sbatch", "--export", "\"ALL,additionalProp1=value1,additionalProp3=value2\"",
-                                "--job-name=someTaskName", "--partition=someQueue", "--chdir=/data", "--some=5",
-                                "--comment=\"some commentary in a few words  \\\\\\\" and a few more words\"",
-                                "/data/test.py"})
+                                     "--job-name=someTaskName", "--partition=someQueue", "--chdir=/data", "--some=5",
+                                     "--comment=\"some commentary in a few words  \\\\\\\" and a few more words\"",
+                                     "/data/test.py"})
         );
     }
 }

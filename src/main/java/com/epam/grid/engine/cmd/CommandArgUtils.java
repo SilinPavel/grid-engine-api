@@ -98,6 +98,7 @@ public class CommandArgUtils {
             case SPACE:
             case TAB:
                 return true;
+            default:
         }
         return false;
     }
