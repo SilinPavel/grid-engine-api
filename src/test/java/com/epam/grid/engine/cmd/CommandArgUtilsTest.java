@@ -36,24 +36,22 @@ class CommandArgUtilsTest {
 
     static Stream<Arguments> provideQhostStringCommandAndExpectedCommand() {
         return Stream.of(
-                Arguments.of("qhost -h \"current_host1\" \"current_host2\" \"current_host3\" -xml",
-                        new String[]{"qhost", "-h", "\"current_host1\" \"current_host2\" \"current_host3\"", "-xml"}),
-                Arguments.of("qhost -h \"current host\",\"current_host\" -xml",
-                        new String[]{"qhost", "-h", "\"current host\",\"current_host\"", "-xml"}),
-                Arguments.of("qhost -h current host current_host -xml",
-                        new String[]{"qhost", "-h", "current", "host", "current_host", "-xml"}),
-                Arguments.of("qhost -h \"current_host1\" \"current_host2\" -xml",
-                        new String[]{"qhost", "-h", "\"current_host1\" \"current_host2\"", "-xml"}),
-                Arguments.of("\"current host\"",
-                        new String[]{"\"current host\""}),
-                Arguments.of("qhost \\ -xml",
-                        new String[]{"qhost", "-xml"}),
-                Arguments.of("qhost -xml",
-                        new String[]{"qhost", "-xml"}),
+                Arguments.of("qhost -h current_host1 current_host2 current_host3 -xml",
+                        new String[]{"qhost", "-h", "current_host1", "current_host2", "current_host3", "-xml"}),
+                Arguments.of("qhost\n-h\n \n current_host\n \n\n-xml\n",
+                        new String[]{"qhost", "-h", "current_host", "-xml"}),
                 Arguments.of("qhost\r\n\r\n-h\r\n \r\n current_host\r\n \r\n\r\n-xml\r\n",
                         new String[]{"qhost", "-h", "current_host", "-xml"}),
                 Arguments.of("\"test current host\"",
-                        new String[]{"\"test current host\""})
+                        new String[]{"\"test current host\""}),
+                Arguments.of("sbatch\n\n    --export \"ALL,additionalProp1=value1,additionalProp3=value2\"\n\n\n\n\n\n"
+                                + "    --job-name=someTaskName\n\n\n    --partition=someQueue\n\n\n    --chdir=/data\n"
+                                + "\n\n    \n    --some=5 --comment=\"some commentary in a few words  \\\\\\\" and a f"
+                                + "ew more words\"\n    \n\n/data/test.py\n",
+                        new String[]{"sbatch", "--export", "\"ALL,additionalProp1=value1,additionalProp3=value2\"",
+                                "--job-name=someTaskName", "--partition=someQueue", "--chdir=/data", "--some=5",
+                                "--comment=\"some commentary in a few words  \\\\\\\" and a few more words\"",
+                                "/data/test.py"})
         );
     }
 }

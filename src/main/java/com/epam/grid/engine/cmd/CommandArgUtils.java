@@ -21,15 +21,9 @@ package com.epam.grid.engine.cmd;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
-import static com.epam.grid.engine.utils.TextConstants.SPACE;
-import static com.epam.grid.engine.utils.TextConstants.QUOTE;
-import static com.epam.grid.engine.utils.TextConstants.APOSTROPHE;
 
 /**
  * This class performs the formation of the structure of the executed command
@@ -38,67 +32,73 @@ import static com.epam.grid.engine.utils.TextConstants.APOSTROPHE;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommandArgUtils {
 
-    private static final String DELIMITERS = " \\" + System.lineSeparator();
+    private static final char CR = '\r';
+    private static final char LF = '\n';
+    private static final char TAB = '\t';
+    private static final char SPACE = ' ';
+    private static final char QUOTE = '"';
+    private static final char BACKSLASH = '\\';
 
     /**
      * This method forms a command structure from a string command.
      *
-     * @param command The command from the template.
+     * @param command The command from the template engine.
      * @return The command's structure that is ready for execution.
      */
     public static String[] splitCommandIntoArgs(final String command) {
-        final String[] arr = checkAndMergeQuotesStrings(StringUtils.tokenizeToStringArray(command, DELIMITERS));
-        return Arrays.stream(arr).map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
-    }
-
-    /**
-     * This method searches for parts of quoted strings that are split into several strings when parsing
-     * and combines them into one string.
-     *
-     * @param commandParts The command from the template after parsing.
-     * @return The command's structure.
-     */
-    private static String[] checkAndMergeQuotesStrings(final String[] commandParts) {
         final List<String> result = new ArrayList<>();
-        final StringBuilder quotedPart = new StringBuilder();
+        final StringBuilder token = new StringBuilder();
 
-        for (String commandPart : commandParts) {
-            if (commandPart.startsWith(QUOTE) || commandPart.startsWith(APOSTROPHE)) {
-                appendCommandToBuilder(quotedPart, commandPart);
-            } else if (commandPart.endsWith(QUOTE) || commandPart.endsWith(APOSTROPHE)) {
-                appendCommandToBuilder(quotedPart, commandPart);
-                dumpQuotedToResults(quotedPart, result);
-            } else {
-                addQuotedPartToBuilderOrDump(commandPart, quotedPart, result);
+        boolean isQuote = false;
+        boolean isToken = false;
+        boolean isQuoteEscapedToken = false;
+
+        for (int i = 0; i < command.length(); i++) {
+            if (!isToken) {
+                if (isWhitespaceCharacter(command.charAt(i))) {
+                    continue;
+                }
+                isToken = true;
             }
+
+            if (!isQuote && isWhitespaceCharacter(command.charAt(i))) {
+                result.add(token.toString());
+                token.setLength(0);
+                isToken = false;
+                continue;
+            }
+
+            if (command.charAt(i) == QUOTE) {
+                if (token.length() == 1 && command.charAt(i - 1) == BACKSLASH) { //a start of token with escaped quote
+                    isQuoteEscapedToken = true;
+                    isQuote = true;
+                } else {
+                    if (!isQuote || ((i - 1 > 0) && command.charAt(i - 1) != BACKSLASH)) {
+                        isQuote = !isQuote;
+                    }
+                    if (isQuoteEscapedToken) {
+                        isQuote = false;
+                    }
+                    isQuoteEscapedToken = false;
+                }
+            }
+            token.append(command.charAt(i));
         }
-        dumpQuotedToResultsIfPresent(quotedPart, result);
+
+        if (token.length() != 0) {
+            result.add(token.toString());
+        }
         return result.toArray(new String[0]);
     }
 
-    private static void addQuotedPartToBuilderOrDump(final String commandPart, final StringBuilder quotedPart,
-                                                     final List<String> result) {
-        if (quotedPart.length() != 0 && !quotedPart.toString().endsWith(QUOTE)
-                && !quotedPart.toString().endsWith(APOSTROPHE)) {
-            appendCommandToBuilder(quotedPart, commandPart);
-        } else {
-            dumpQuotedToResultsIfPresent(quotedPart, result);
-            result.add(commandPart);
+    private static boolean isWhitespaceCharacter(final char ch) {
+        switch (ch) {
+            case CR:
+            case LF:
+            case SPACE:
+            case TAB:
+                return true;
         }
-    }
-
-    private static void dumpQuotedToResults(final StringBuilder quotedPart, final List<String> result) {
-        result.add(quotedPart.toString());
-        quotedPart.setLength(0);
-    }
-
-    private static void dumpQuotedToResultsIfPresent(final StringBuilder quotedPart, final List<String> result) {
-        if (quotedPart.length() > 0) {
-            dumpQuotedToResults(quotedPart, result);
-        }
-    }
-
-    private static void appendCommandToBuilder(final StringBuilder quotedPart, final String commandPart) {
-        quotedPart.append(SPACE).append(commandPart);
+        return false;
     }
 }
