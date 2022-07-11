@@ -135,7 +135,7 @@ public class SlurmJobProviderTest {
     private static final String ENV_VARIABLES = "envVariables";
     private static final String ENV_VAR_KEY = "parameter1";
     private static final String ENV_VAR_VALUE = "some value with spaces";
-    private static final String ENV_VAR_COMMAND_ARG = String.format("%s=\"%s\"", ENV_VAR_KEY, ENV_VAR_VALUE);
+    private static final String ENV_VAR_COMMAND_ARG = String.format("%s=%s", ENV_VAR_KEY, ENV_VAR_VALUE);
     private static final String ENV_VAR_ONLY_KEY_COMMAND_ARG = ENV_VAR_KEY;
     private static final String ENV_VAR_FLAG = "--export ";
     private static final String JOB_PRIORITY4 = "9999";

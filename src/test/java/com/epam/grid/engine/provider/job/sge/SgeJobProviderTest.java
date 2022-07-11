@@ -98,7 +98,7 @@ public class SgeJobProviderTest {
 
     private static final String ENV_VAR_KEY = "myVarKey";
     private static final String ENV_VAR_VALUE = "some value with spaces";
-    private static final String ENV_VAR_MAP_ENTRY = String.format("%s=\"%s\"", ENV_VAR_KEY, ENV_VAR_VALUE);
+    private static final String ENV_VAR_MAP_ENTRY = String.format("%s=%s", ENV_VAR_KEY, ENV_VAR_VALUE);
     private static final String ENV_VAR_MAP_ONLY_KEY = ENV_VAR_KEY;
     private static final String ENV_VAR_OPTION = "-v";
     private static final String ENV_VARIABLES = "envVariables";

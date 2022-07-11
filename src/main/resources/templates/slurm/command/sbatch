@@ -1,20 +1,19 @@
 sbatch
     --export
 [# th:if="${options.useAllEnvVars}"]
-    [# th:if="${envVariables != null}"]
-        ALL,[(${envVariables})]
-    [/]
-    [# th:unless="${envVariables != null}"]
+    [# th:if="${#strings.isEmpty(envVariables)}"]
         ALL
     [/]
-[/]
-
-[# th:unless="${options.useAllEnvVars}"]
-    [# th:if="${envVariables != null}"]
-        [(${envVariables})]
+    [# th:unless="${#strings.isEmpty(envVariables)}"]
+        "ALL,[(${envVariables})]"
     [/]
-    [# th:unless="${envVariables != null}"]
+[/]
+[# th:unless="${options.useAllEnvVars}"]
+    [# th:if="${#strings.isEmpty(envVariables)}"]
         NONE
+    [/]
+    [# th:unless="${#strings.isEmpty(envVariables)}"]
+        "[(${envVariables})]"
     [/]
 [/]
 [# th:if="${options.priority != null && options.priority != 0}"]

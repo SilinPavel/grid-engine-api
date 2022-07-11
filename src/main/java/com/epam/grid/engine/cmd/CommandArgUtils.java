@@ -124,7 +124,7 @@ public class CommandArgUtils {
     private static String envVarToString(final Map.Entry<String, String> entry) {
         final String value = entry.getValue();
         if (StringUtils.hasText(value)) {
-            return String.format("%s=\"%s\"", entry.getKey(), value);
+            return String.format("%s=%s", entry.getKey(), value);
         }
         return entry.getKey();
     }

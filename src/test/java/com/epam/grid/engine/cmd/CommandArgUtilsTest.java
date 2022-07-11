@@ -30,11 +30,8 @@ import java.util.stream.Stream;
 class CommandArgUtilsTest {
 
     private static final String EMPTY_STRING = "";
-    private static final String SOME_VARIABLE_NAME = "someVariable";
-    private static final String SECOND_VARIABLE_NAME = "secondVariable";
-    private static final String SOME_VALUE = "someValue";
-    private static final String SOME_VALUE_WITH_SPACES = "a value with spaces";
-
+    private static final String ONE_VARIABLE_NAME = "oneVariable";
+    private static final String ONE_VALUE_WITH_SPACES = "a value with spaces";
 
     @ParameterizedTest
     @MethodSource("provideCasesToParseCommand")
@@ -80,12 +77,9 @@ class CommandArgUtilsTest {
     static Stream<Arguments> provideEnvironmentVariablesCases() {
         return Stream.of(
                 Arguments.of(EMPTY_STRING, Map.of(EMPTY_STRING, EMPTY_STRING)),
-                Arguments.of(SOME_VARIABLE_NAME, Map.of(SOME_VARIABLE_NAME, EMPTY_STRING)),
-                Arguments.of(String.format("%s=\"%s\"", SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES),
-                        Map.of(SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES)),
-                Arguments.of(String.format("%s=\"%s\",%s=\"%s\"", SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES,
-                                SECOND_VARIABLE_NAME, SOME_VALUE),
-                        Map.of(SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES,
-                               SECOND_VARIABLE_NAME, SOME_VALUE)));
+                Arguments.of(ONE_VARIABLE_NAME, Map.of(ONE_VARIABLE_NAME, EMPTY_STRING)),
+                Arguments.of(String.format("%s=%s", ONE_VARIABLE_NAME, ONE_VALUE_WITH_SPACES),
+                        Map.of(ONE_VARIABLE_NAME, ONE_VALUE_WITH_SPACES))
+        );
     }
 }

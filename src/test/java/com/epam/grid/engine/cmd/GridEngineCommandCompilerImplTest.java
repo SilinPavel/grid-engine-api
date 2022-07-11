@@ -214,7 +214,7 @@ public class GridEngineCommandCompilerImplTest {
     private static final String ENV_VAR_OPTION = "-v";
     private static final String ENV_VAR_KEY = "myVarKey";
     private static final String ENV_VAR_VALUE = "some value with spaces";
-    private static final String ENV_VAR_MAP_ENTRY = String.format("%s=\"%s\"", ENV_VAR_KEY, ENV_VAR_VALUE);
+    private static final String ENV_VAR_MAP_ENTRY = String.format("%s=%s", ENV_VAR_KEY, ENV_VAR_VALUE);
     private static final String ENV_VAR_MAP_ONLY_KEY = ENV_VAR_KEY;
     private static final String PARALLEL_ENV_OPTION = "-pe";
     private static final String PE_NAME = "smp";
@@ -593,9 +593,9 @@ public class GridEngineCommandCompilerImplTest {
     static Stream<Arguments> provideValidParametersWithEnvVariables() {
         return Stream.of(
                 Arguments.of(getSimpleJobCommand(), ENV_VAR_MAP_ENTRY,
-                        new String[]{QSUB, ENV_VAR_OPTION, ENV_VAR_MAP_ENTRY, JOB_COMMAND}),
-                Arguments.of(getSimpleJobCommand(), ENV_VAR_KEY,
-                        new String[]{QSUB, ENV_VAR_OPTION, ENV_VAR_MAP_ONLY_KEY, JOB_COMMAND})
+                        new String[]{QSUB, ENV_VAR_OPTION, String.format("\"%s\"", ENV_VAR_MAP_ENTRY), JOB_COMMAND}),
+                Arguments.of(getSimpleJobCommand(), ENV_VAR_MAP_ONLY_KEY,
+                        new String[]{QSUB, ENV_VAR_OPTION, String.format("\"%s\"", ENV_VAR_MAP_ONLY_KEY), JOB_COMMAND})
         );
     }
 
