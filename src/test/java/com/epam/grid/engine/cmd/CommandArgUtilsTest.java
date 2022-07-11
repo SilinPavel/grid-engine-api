@@ -24,9 +24,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 class CommandArgUtilsTest {
+
+    private static final String EMPTY_STRING = "";
+    private static final String SOME_VARIABLE_NAME = "someVariable";
+    private static final String SECOND_VARIABLE_NAME = "secondVariable";
+    private static final String SOME_VALUE = "someValue";
+    private static final String SOME_VALUE_WITH_SPACES = "a value with spaces";
+
 
     @ParameterizedTest
     @MethodSource("provideCasesToParseCommand")
@@ -60,5 +68,24 @@ class CommandArgUtilsTest {
                                      "--comment=\"some commentary in a few words  \\\\\\\" and a few more words\"",
                                      "/data/test.py"})
         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideEnvironmentVariablesCases")
+    public void shouldReturnEnvironmentVariablesAsCommandArgument(final String expectedArgument,
+                                                                  final Map<String, String> variables) {
+        Assertions.assertEquals(expectedArgument, CommandArgUtils.envVariablesMapToString(variables));
+    }
+
+    static Stream<Arguments> provideEnvironmentVariablesCases() {
+        return Stream.of(
+                Arguments.of(EMPTY_STRING, Map.of(EMPTY_STRING, EMPTY_STRING)),
+                Arguments.of(SOME_VARIABLE_NAME, Map.of(SOME_VARIABLE_NAME, EMPTY_STRING)),
+                Arguments.of(String.format("%s=\"%s\"", SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES),
+                        Map.of(SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES)),
+                Arguments.of(String.format("%s=\"%s\",%s=\"%s\"", SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES,
+                                SECOND_VARIABLE_NAME, SOME_VALUE),
+                        Map.of(SOME_VARIABLE_NAME, SOME_VALUE_WITH_SPACES,
+                               SECOND_VARIABLE_NAME, SOME_VALUE)));
     }
 }

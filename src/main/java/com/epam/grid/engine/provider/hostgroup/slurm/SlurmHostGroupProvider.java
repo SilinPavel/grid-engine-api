@@ -36,6 +36,7 @@ import java.util.List;
 @ConditionalOnProperty(name = "grid.engine.type", havingValue = "SLURM")
 public class SlurmHostGroupProvider implements HostGroupProvider {
 
+    @Override
     public EngineType getProviderType() {
         return EngineType.SLURM;
     }

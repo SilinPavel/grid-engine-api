@@ -19,11 +19,16 @@
 
 package com.epam.grid.engine.cmd;
 
+import com.epam.grid.engine.utils.TextConstants;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.apache.commons.collections4.MapUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * This class performs the formation of the structure of the executed command
@@ -69,11 +74,11 @@ public class CommandArgUtils {
             }
 
             if (command.charAt(i) == QUOTE) {
-                if (token.length() == 1 && command.charAt(i - 1) == BACKSLASH) { //a start of token with escaped quote
+                if (token.length() == 1 && command.charAt(i - 1) == BACKSLASH) { //start of a token with escaped quote
                     isQuoteEscapedToken = true;
                     isQuote = true;
                 } else {
-                    if (!isQuote || ((i - 1 > 0) && command.charAt(i - 1) != BACKSLASH)) {
+                    if (!isQuote || (i - 1 > 0) && command.charAt(i - 1) != BACKSLASH) {
                         isQuote = !isQuote;
                     }
                     if (isQuoteEscapedToken) {
@@ -99,7 +104,28 @@ public class CommandArgUtils {
             case TAB:
                 return true;
             default:
+                return false;
         }
-        return false;
+    }
+
+
+    /**
+     * Forms a structure to pass environment variables as command argument.
+     *
+     * @param variables the map of environment variables as keys and their values.
+     * @return the string of the created structure.
+     */
+    public static String envVariablesMapToString(final Map<String, String> variables) {
+        return MapUtils.emptyIfNull(variables).entrySet().stream()
+                .map(CommandArgUtils::envVarToString)
+                .collect(Collectors.joining(TextConstants.COMMA));
+    }
+
+    private static String envVarToString(final Map.Entry<String, String> entry) {
+        final String value = entry.getValue();
+        if (StringUtils.hasText(value)) {
+            return String.format("%s=\"%s\"", entry.getKey(), value);
+        }
+        return entry.getKey();
     }
 }

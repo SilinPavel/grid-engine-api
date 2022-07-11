@@ -134,10 +134,10 @@ public class SlurmJobProviderTest {
     private static final String SBATCH = "sbatch";
     private static final String ENV_VARIABLES = "envVariables";
     private static final String ENV_VAR_KEY = "parameter1";
-    private static final String ENV_VAR_VALUE = "parameter one value with spaces";
-    private static final String ENV_VAR_MAP_ENTRY = "parameter1=parameter one value with spaces";
+    private static final String ENV_VAR_VALUE = "some value with spaces";
+    private static final String ENV_VAR_COMMAND_ARG = String.format("%s=\"%s\"", ENV_VAR_KEY, ENV_VAR_VALUE);
+    private static final String ENV_VAR_ONLY_KEY_COMMAND_ARG = ENV_VAR_KEY;
     private static final String ENV_VAR_FLAG = "--export ";
-    private static final String ENV_VAR_MAP_ONLY_KEY = "parameter1";
     private static final String JOB_PRIORITY4 = "9999";
     private static final String JOB_PARTITION = "normal";
     private static final String JOB_WORK_DIR = "/data/";
@@ -472,9 +472,9 @@ public class SlurmJobProviderTest {
     static Stream<Arguments> provideValidEnvVariables() {
         return Stream.of(
                 Arguments.of(Collections.singletonMap(ENV_VAR_KEY, ENV_VAR_VALUE),
-                        new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_MAP_ENTRY, JOB_NAME1}, ENV_VAR_MAP_ENTRY),
+                        new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_COMMAND_ARG, JOB_NAME1}, ENV_VAR_COMMAND_ARG),
                 Arguments.of(Collections.singletonMap(ENV_VAR_KEY, EMPTY_STRING),
-                        new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_KEY, JOB_NAME1}, ENV_VAR_MAP_ONLY_KEY)
+                        new String[]{SBATCH, ENV_VAR_FLAG, ENV_VAR_KEY, JOB_NAME1}, ENV_VAR_ONLY_KEY_COMMAND_ARG)
         );
     }
 
@@ -500,7 +500,7 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideCorrectSbatchCommands() {
         return Stream.of(
-                    new String[]{SBATCH, "--export=", ENV_VAR_MAP_ENTRY, JOB_NAME1},
+                    new String[]{SBATCH, "--export=", ENV_VAR_COMMAND_ARG, JOB_NAME1},
                     new String[]{SBATCH, "--priority=", JOB_PRIORITY4, JOB_NAME1},
                     new String[]{SBATCH, "-J", JOB_NAME3, JOB_NAME1},
                     new String[]{SBATCH, "--partition=", JOB_PARTITION, JOB_NAME1},
