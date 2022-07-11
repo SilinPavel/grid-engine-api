@@ -29,21 +29,28 @@ import java.util.stream.Stream;
 class CommandArgUtilsTest {
 
     @ParameterizedTest
-    @MethodSource("provideQhostStringCommandAndExpectedCommand")
-    public void shouldMakeRightQhostCommand(final String commandString, final String[] expectedCommand) {
+    @MethodSource("provideCasesToParseCommand")
+    public void shouldSplitCommandIntoTokenArgs(final String commandString, final String[] expectedCommand) {
         Assertions.assertArrayEquals(expectedCommand, CommandArgUtils.splitCommandIntoArgs(commandString));
     }
 
-    static Stream<Arguments> provideQhostStringCommandAndExpectedCommand() {
+    static Stream<Arguments> provideCasesToParseCommand() {
         return Stream.of(
                 Arguments.of("qhost -h current_host1 current_host2 current_host3 -xml",
                         new String[]{"qhost", "-h", "current_host1", "current_host2", "current_host3", "-xml"}),
+
                 Arguments.of("qhost\n-h\n \n current_host\n \n\n-xml\n",
                         new String[]{"qhost", "-h", "current_host", "-xml"}),
+
                 Arguments.of("qhost\r\n\r\n-h\r\n \r\n current_host\r\n \r\n\r\n-xml\r\n",
                         new String[]{"qhost", "-h", "current_host", "-xml"}),
-                Arguments.of("\"test current host\"",
-                        new String[]{"\"test current host\""}),
+
+                Arguments.of("\\\"some token is entirely enclosed in escaped quotes\\\"",
+                        new String[]{"\\\"some token is entirely enclosed in escaped quotes\\\""}),
+
+                Arguments.of("\"test \\\"escape\tquoted text\\\"\"\t\r\n some\t text",
+                        new String[]{"\"test \\\"escape\tquoted text\\\"\"", "some", "text"}),
+
                 Arguments.of("sbatch\n\n    --export \"ALL,additionalProp1=value1,additionalProp3=value2\"\n\n\n\n\n\n"
                                 + "    --job-name=someTaskName\n\n\n    --partition=someQueue\n\n\n    --chdir=/data\n"
                                 + "\n\n    \n    --some=5 --comment=\"some commentary in a few words  \\\\\\\" and a f"
