@@ -28,6 +28,7 @@ import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.provider.job.JobProvider;
 
+import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ import java.nio.file.Path;
 public class JobOperationProviderService {
 
     private final String logDir;
+    private final String gridEngineFolder;
     private final JobProvider jobProvider;
 
     /**
@@ -57,9 +59,12 @@ public class JobOperationProviderService {
      * @see JobProvider
      */
 
-    public JobOperationProviderService(final JobProvider jobProvider, @Value("${job.log.dir}") final String logDir) {
+    public JobOperationProviderService(final JobProvider jobProvider,
+                                       @Value("${job.log.dir}") final String logDir,
+                                       @Value("${grid.engine.shared.folder}") final String gridEngineFolder) {
         this.jobProvider = jobProvider;
         this.logDir = logDir;
+        this.gridEngineFolder = gridEngineFolder;
     }
 
     /**
@@ -89,6 +94,9 @@ public class JobOperationProviderService {
      * @return Running job.
      */
     public Job runJob(final JobOptions options) {
+        if (options.getWorkingDir() != null) {
+            options.setWorkingDir(DirectoryPathUtils.buildProperDir(options.getWorkingDir(), gridEngineFolder));
+        }
         return jobProvider.runJob(options);
     }
 

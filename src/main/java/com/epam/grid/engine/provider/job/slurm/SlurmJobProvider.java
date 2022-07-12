@@ -37,6 +37,7 @@ import com.epam.grid.engine.mapper.job.slurm.SlurmJobMapper;
 import com.epam.grid.engine.provider.job.JobProvider;
 
 import com.epam.grid.engine.provider.utils.CommandsUtils;
+import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import com.epam.grid.engine.provider.utils.slurm.job.SacctCommandParser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
@@ -118,18 +119,17 @@ public class SlurmJobProvider implements JobProvider {
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
-                            @Value("${slurm.job.output-fields-count:52}")
-                            final int fieldsCount,
+                            @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
                             @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:slurm_load_jobs error: Invalid job id specified}")
                             final String jobIdNotFoundMessage,
-                            @Value("${job.log.dir}")
-                            final String logDir) {
+                            @Value("${job.log.dir}") final String logDir,
+                            @Value("${grid.engine.shared.folder}") final String gridEngineFolder) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
         this.fieldsCount = fieldsCount;
         this.jobIdNotFoundMessage = jobIdNotFoundMessage;
-        this.logDir = logDir;
+        this.logDir = DirectoryPathUtils.buildProperDir(logDir, gridEngineFolder);
     }
 
     @Override
