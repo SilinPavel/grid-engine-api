@@ -78,11 +78,12 @@ public class CommandArgUtils {
                     isQuoteEscapedToken = true;
                     isQuote = true;
                 } else {
-                    if (!isQuote || (i - 1 > 0) && command.charAt(i - 1) != BACKSLASH) {
-                        isQuote = !isQuote;
-                    }
                     if (isQuoteEscapedToken) {
                         isQuote = false;
+                    } else {
+                        if (!isQuote || ((i - 1 > 0) && command.charAt(i - 1) != BACKSLASH)) {
+                            isQuote = !isQuote;
+                        }
                     }
                     isQuoteEscapedToken = false;
                 }
@@ -107,7 +108,6 @@ public class CommandArgUtils {
                 return false;
         }
     }
-
 
     /**
      * Forms a structure to pass environment variables as command argument.

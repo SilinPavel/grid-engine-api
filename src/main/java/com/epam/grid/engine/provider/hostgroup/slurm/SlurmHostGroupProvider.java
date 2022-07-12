@@ -42,7 +42,8 @@ public class SlurmHostGroupProvider implements HostGroupProvider {
     }
 
     /**
-     * @throws UnsupportedOperationException because Slurm doesn't have approach of stored host groups
+     * This method only throws an error because Slurm doesn't have an approach of stored host groups.
+     * @throws UnsupportedOperationException - slurm doesn't have an approach of stored host groups
      */
     @Override
     public List<HostGroup> listHostGroups(final HostGroupFilter hostGroupFilter) {
@@ -50,7 +51,8 @@ public class SlurmHostGroupProvider implements HostGroupProvider {
     }
 
     /**
-     * @throws UnsupportedOperationException because Slurm doesn't have approach of stored host groups
+     * This method only throws an error because Slurm doesn't have an approach of stored host groups.
+     * @throws UnsupportedOperationException - slurm doesn't have an approach of stored host groups
      */
     @Override
     public HostGroup getHostGroup(final String groupName) {

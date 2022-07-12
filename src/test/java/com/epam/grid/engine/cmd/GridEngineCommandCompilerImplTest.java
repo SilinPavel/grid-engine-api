@@ -593,10 +593,14 @@ public class GridEngineCommandCompilerImplTest {
     static Stream<Arguments> provideValidParametersWithEnvVariables() {
         return Stream.of(
                 Arguments.of(getSimpleJobCommand(), ENV_VAR_MAP_ENTRY,
-                        new String[]{QSUB, ENV_VAR_OPTION, String.format("\"%s\"", ENV_VAR_MAP_ENTRY), JOB_COMMAND}),
+                        new String[]{QSUB, ENV_VAR_OPTION, getQuotedValue(ENV_VAR_MAP_ENTRY), JOB_COMMAND}),
                 Arguments.of(getSimpleJobCommand(), ENV_VAR_MAP_ONLY_KEY,
-                        new String[]{QSUB, ENV_VAR_OPTION, String.format("\"%s\"", ENV_VAR_MAP_ONLY_KEY), JOB_COMMAND})
+                        new String[]{QSUB, ENV_VAR_OPTION, getQuotedValue(ENV_VAR_MAP_ONLY_KEY), JOB_COMMAND})
         );
+    }
+
+    private static String getQuotedValue(final String value) {
+        return String.format("\"%s\"", value);
     }
 
     @Test
