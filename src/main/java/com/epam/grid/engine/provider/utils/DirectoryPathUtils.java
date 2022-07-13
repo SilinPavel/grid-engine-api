@@ -35,60 +35,57 @@ import lombok.extern.slf4j.Slf4j;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DirectoryPathUtils {
     private static final String FORWARDSLASH = "/";
-    private static final String ALL_PERMISSIONS_STRING = "rwxrwxrwx";
+    private static final String ALL_PERMISSIONS_STRING = "rwxrw-rw-";
 
     /**
-     * If adjustable directory has absolute path, checks, that it begins with gridEngineFolder and exists, creates if
+     * If adjustable directory has absolute path, checks, that it begins with rootFolder and exists, creates if
      * needed.
-     * If adjustable directory has relative path, adds gridEngineFolder to its beginning, checks its existence and
+     * If adjustable directory has relative path, adds rootFolder to its beginning, checks its existence and
      * creates, if needed.
      *
-     * @param adjustableFolder Directory, which should be checked for correction path
-     * @param gridEngineFolder Primary working directory from properties
+     * @param nestedFolder Directory, which should be checked for correction path
+     * @param rootFolder Primary working directory from properties
      * @return Adjusted directory path with added primary directory added if needed
      */
-    public static String buildProperDir(final String adjustableFolder, final String gridEngineFolder) {
+    public static String buildProperDir(final String rootFolder, final String nestedFolder) {
         final StringBuilder properDir = new StringBuilder();
-        final File adjustableFolderPath = new File(adjustableFolder);
-        if (adjustableFolderPath.isAbsolute()) {
-            if (!adjustableFolder.startsWith(gridEngineFolder)) {
-                final String errorMessage = "Provided path is absolute, but doesn't begin with Grid Engine folder";
+        final File nestedFolderPath = new File(nestedFolder);
+        if (nestedFolderPath.isAbsolute()) {
+            if (!nestedFolder.startsWith(rootFolder)) {
+                final String errorMessage = "Nested folder path is absolute, but doesn't start with " +
+                        "grid.engine.shared.folder";
                 log.error(errorMessage);
                 throw new IllegalStateException(errorMessage);
             }
-            if (!adjustableFolderPath.exists()) {
+            if (!nestedFolderPath.exists()) {
                 try {
-                    if (adjustableFolderPath.mkdirs()) {
-                        log.info("Directory with path " + adjustableFolderPath + " was created.");
-                        grantAllPermissionsToFolder(adjustableFolderPath);
+                    if (nestedFolderPath.mkdirs()) {
+                        log.info("Directory with path " + nestedFolderPath + " was created.");
+                        grantAllPermissionsToFolder(nestedFolderPath);
                     } else {
-                        final String errorMessage = "Failed to create directory with path " + adjustableFolderPath;
-                        log.error(errorMessage);
-                        throw new IOException(errorMessage);
+                        throw new IOException("Failed to create directory with path " + nestedFolderPath);
                     }
                 } catch (final Exception exception) {
                     log.error(exception.getMessage());
                     exception.printStackTrace();
                 }
             }
-            properDir.append(adjustableFolderPath);
+            properDir.append(nestedFolderPath);
         } else {
-            if (gridEngineFolder.endsWith(FORWARDSLASH)) {
-                properDir.append(gridEngineFolder).append(adjustableFolderPath);
+            if (rootFolder.endsWith(FORWARDSLASH)) {
+                properDir.append(rootFolder).append(nestedFolderPath);
             } else {
-                properDir.append(gridEngineFolder).append(FORWARDSLASH).append(adjustableFolderPath);
+                properDir.append(rootFolder).append(FORWARDSLASH).append(nestedFolderPath);
             }
-            log.info("Provided directory was changed to " + properDir);
+            log.info("Nested folder path was changed to " + properDir);
             final File gridEnginePath = new File(properDir.toString());
             if (!gridEnginePath.exists()) {
                 try {
                     if (gridEnginePath.mkdirs()) {
-                        log.info(gridEnginePath + " Grid Engine folder was created.");
+                        log.info(gridEnginePath + " Grid Shared Folder was created.");
                         grantAllPermissionsToFolder(gridEnginePath);
                     } else {
-                        final String errorMessage = "Failed to create directory with path " + gridEnginePath;
-                        log.error(errorMessage);
-                        throw new IOException(errorMessage);
+                        throw new IOException("Failed to create directory with path " + gridEnginePath);
                     }
                 } catch (final Exception exception) {
                     log.error(exception.getMessage());

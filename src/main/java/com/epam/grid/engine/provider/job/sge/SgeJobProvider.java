@@ -127,11 +127,11 @@ public class SgeJobProvider implements JobProvider {
                           final SimpleCmdExecutor simpleCmdExecutor,
                           final GridEngineCommandCompiler commandCompiler,
                           @Value("${job.log.dir}") final String logDir,
-                          @Value("${grid.engine.shared.folder}") final String gridEngineFolder) {
+                          @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = DirectoryPathUtils.buildProperDir(logDir, gridEngineFolder);
+        this.logDir = DirectoryPathUtils.buildProperDir(gridSharedFolder, logDir);
     }
 
     /**

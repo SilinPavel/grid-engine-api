@@ -47,7 +47,7 @@ import java.nio.file.Path;
 public class JobOperationProviderService {
 
     private final String logDir;
-    private final String gridEngineFolder;
+    private final String gridSharedFolder;
     private final JobProvider jobProvider;
 
     /**
@@ -61,10 +61,10 @@ public class JobOperationProviderService {
 
     public JobOperationProviderService(final JobProvider jobProvider,
                                        @Value("${job.log.dir}") final String logDir,
-                                       @Value("${grid.engine.shared.folder}") final String gridEngineFolder) {
+                                       @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.jobProvider = jobProvider;
         this.logDir = logDir;
-        this.gridEngineFolder = gridEngineFolder;
+        this.gridSharedFolder = gridSharedFolder;
     }
 
     /**
@@ -95,7 +95,7 @@ public class JobOperationProviderService {
      */
     public Job runJob(final JobOptions options) {
         if (options.getWorkingDir() != null) {
-            options.setWorkingDir(DirectoryPathUtils.buildProperDir(options.getWorkingDir(), gridEngineFolder));
+            options.setWorkingDir(DirectoryPathUtils.buildProperDir(options.getWorkingDir(), gridSharedFolder));
         }
         return jobProvider.runJob(options);
     }

@@ -123,13 +123,13 @@ public class SlurmJobProvider implements JobProvider {
                             @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:slurm_load_jobs error: Invalid job id specified}")
                             final String jobIdNotFoundMessage,
                             @Value("${job.log.dir}") final String logDir,
-                            @Value("${grid.engine.shared.folder}") final String gridEngineFolder) {
+                            @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
         this.fieldsCount = fieldsCount;
         this.jobIdNotFoundMessage = jobIdNotFoundMessage;
-        this.logDir = DirectoryPathUtils.buildProperDir(logDir, gridEngineFolder);
+        this.logDir = DirectoryPathUtils.buildProperDir(gridSharedFolder, logDir);
     }
 
     @Override
