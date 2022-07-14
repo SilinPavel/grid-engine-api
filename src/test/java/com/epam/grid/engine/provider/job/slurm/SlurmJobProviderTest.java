@@ -82,7 +82,9 @@ public class SlurmJobProviderTest {
     private static final String JOB_PRIORITY1 = "0.99998474121093";
     private static final String JOB_PRIORITY2 = "0.99998474074527";
     private static final String JOB_PRIORITY3 = "0.00000000000000";
+    private static final String SOME_ARGUMENT = "someArgument";
     private static final long SOME_WRONG_SENT_PRIORITY = -10L;
+    private static final long SECOND_WRONG_SENT_PRIORITY = 4_294_967_295L;
 
     private static final long SOME_CORRECT_JOB_ID = 5L;
     private static final long SECOND_CORRECT_JOB_ID = 10L;
@@ -365,55 +367,28 @@ public class SlurmJobProviderTest {
 
     @ParameterizedTest
     @MethodSource("provideInvalidJobOptions")
-    public void shouldThrowGridEngineExceptionMakingSbatchCommand(final JobOptions jobOptions) {
-        final Throwable thrown = Assertions.assertThrows(GridEngineException.class,
-                () -> slurmJobProvider.runJob(jobOptions));
-        Assertions.assertNotNull(thrown.getMessage());
+    public void shouldThrowWhenPassedIllegalJobOptionsToJobSubmitting(final JobOptions jobOptions) {
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.runJob(jobOptions));
     }
 
     static Stream<Arguments> provideInvalidJobOptions() {
         return Stream.of(
+                Arguments.of(new JobOptions()),
                 Arguments.of(JobOptions.builder().command(null).build()),
-                Arguments.of(JobOptions.builder().command(EMPTY_STRING).build())
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideUnsupportedJobOptions")
-    public void shouldThrowUnsupportedExceptionMakingSbatchCommand(final JobOptions jobOptions) {
-        final Throwable thrown = Assertions.assertThrows(UnsupportedOperationException.class,
-                () -> slurmJobProvider.runJob(jobOptions));
-        Assertions.assertNotNull(thrown.getMessage());
-    }
-
-    static Stream<Arguments> provideUnsupportedJobOptions() {
-        return Stream.of(
-                Arguments.of(JobOptions.builder().parallelEnvOptions(new ParallelEnvOptions(EMPTY_STRING, 1, 10))
-                        .command(JOB_NAME1).build())
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideIllegalArgumentJobOptions")
-    public void shouldThrowIllegalArgumentExceptionMakingSbatchCommand(final JobOptions jobOptions) {
-        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.runJob(jobOptions));
-    }
-
-    static Stream<Arguments> provideIllegalArgumentJobOptions() {
-        return Stream.of(
-                Arguments.of(JobOptions.builder()
-                        .command(EMPTY_STRING).build()),
-                Arguments.of(JobOptions.builder().priority(SOME_WRONG_SENT_PRIORITY)
-                        .command(JOB_NAME1).build())
+                Arguments.of(JobOptions.builder().command(EMPTY_STRING).build()),
+                Arguments.of(JobOptions.builder().priority(SOME_WRONG_SENT_PRIORITY).command(JOB_NAME1).build()),
+                Arguments.of(JobOptions.builder().priority(SECOND_WRONG_SENT_PRIORITY).command(JOB_NAME1).build()),
+                Arguments.of(JobOptions.builder().command(JOB_NAME1).canBeBinary(true)
+                        .arguments(List.of(SOME_ARGUMENT)).build())
         );
     }
 
     @Test
-    public void shouldThrowsExceptionBecauseOptionsAreEmpty() {
-        final JobOptions jobOptions = new JobOptions();
-        final Throwable thrown = Assertions.assertThrows(GridEngineException.class, () ->
-                slurmJobProvider.runJob(jobOptions));
-        Assertions.assertNotNull(thrown.getMessage());
+    public void shouldThrowUnsupportedExceptionWhenPassedPEOptionsToJobSubmitting() {
+        final JobOptions jobOptions = JobOptions.builder().command(JOB_NAME1)
+                .parallelEnvOptions(new ParallelEnvOptions(EMPTY_STRING, 1, 10))
+                .build();
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> slurmJobProvider.runJob(jobOptions));
     }
 
     @ParameterizedTest
