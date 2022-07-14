@@ -72,6 +72,7 @@ public class SlurmJobProvider implements JobProvider {
     private static final String SCANCEL_COMMAND = "scancel";
     private static final String SQUEUE_COMMAND = "squeue";
     private static final String SBATCH_COMMAND = "sbatch";
+    private static final String ARGUMENTS = "arguments";
     private static final String OPTIONS = "options";
     private static final String LOG_DIR = "logDir";
     private static final String ENV_VARIABLES = "envVariables";
@@ -221,6 +222,7 @@ public class SlurmJobProvider implements JobProvider {
         final Context context = new Context();
         context.setVariable(OPTIONS, options);
         context.setVariable(LOG_DIR, logDir);
+        context.setVariable(ARGUMENTS, CommandArgUtils.toEscapeQuotes(options.getArguments()));
         context.setVariable(ENV_VARIABLES, CommandArgUtils.envVariablesMapToString(options.getEnvVariables()));
         return commandCompiler.compileCommand(getProviderType(), SBATCH_COMMAND, context);
     }

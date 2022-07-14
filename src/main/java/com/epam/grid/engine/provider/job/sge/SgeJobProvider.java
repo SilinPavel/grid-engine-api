@@ -89,6 +89,7 @@ public class SgeJobProvider implements JobProvider {
     private static final String QDEL_COMMAND = "qdel";
     private static final String QSTAT_COMMAND = "qstat";
     private static final String QSUB_COMMAND = "qsub";
+    private static final String ARGUMENTS = "arguments";
     private static final String OPTIONS = "options";
     private static final String LOG_DIR = "logDir";
     private static final String ENV_VARIABLES = "envVariables";
@@ -277,6 +278,7 @@ public class SgeJobProvider implements JobProvider {
         final Context context = new Context();
         context.setVariable(OPTIONS, options);
         context.setVariable(LOG_DIR, logDir);
+        context.setVariable(ARGUMENTS, CommandArgUtils.toEscapeQuotes(options.getArguments()));
         context.setVariable(ENV_VARIABLES, CommandArgUtils.envVariablesMapToString(options.getEnvVariables()));
         return commandCompiler.compileCommand(getProviderType(), QSUB_COMMAND, context);
     }
