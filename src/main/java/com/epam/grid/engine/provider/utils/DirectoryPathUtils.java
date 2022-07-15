@@ -24,6 +24,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.Files;
@@ -38,9 +39,9 @@ public final class DirectoryPathUtils {
     private static final String ALL_PERMISSIONS_STRING = "rwxrw-rw-";
 
     /**
-     * If adjustable directory has absolute path, checks, that it begins with rootFolder and exists, creates if
+     * If nestedFolder directory has absolute path, checks, that it begins with rootFolder and exists, creates if
      * needed.
-     * If adjustable directory has relative path, adds rootFolder to its beginning, checks its existence and
+     * If nestedFolder directory has relative path, adds rootFolder to its beginning, checks its existence and
      * creates, if needed.
      *
      * @param nestedFolder Directory, which should be checked for correction path
@@ -56,21 +57,10 @@ public final class DirectoryPathUtils {
                 throw new IllegalStateException("Nested folder path is absolute, but doesn't start with "
                         + "grid.engine.shared.folder");
             }
-            if (!nestedFolderPath.exists()) {
-                try {
-                    if (nestedFolderPath.mkdirs()) {
-                        log.info("Directory with path " + nestedFolderPath + " was created.");
-                        grantAllPermissionsToFolder(nestedFolderPath);
-                    } else {
-                        throw new IOException("Failed to create directory with path " + nestedFolderPath);
-                    }
-                } catch (final Exception exception) {
-                    throw new IllegalArgumentException("Failed to create a directory by provided path: "
-                            + nestedFolderPath + ". " + exception.getMessage());
-                }
-            }
-            properDir.append(nestedFolderPath);
+            checkIfFolderNotExistsAndCreate(nestedFolderPath);
+            return properDir.append(nestedFolderPath).toString();
         } else {
+            Paths.get(rootFolder).;
             if (rootFolder.endsWith(FORWARDSLASH)) {
                 properDir.append(rootFolder).append(nestedFolderPath);
             } else {
@@ -78,21 +68,26 @@ public final class DirectoryPathUtils {
             }
             log.info("Nested folder path was changed to " + properDir);
             final File gridEnginePath = new File(properDir.toString());
-            if (!gridEnginePath.exists()) {
-                try {
-                    if (gridEnginePath.mkdirs()) {
-                        log.info(gridEnginePath + " Grid Shared Folder was created.");
-                        grantAllPermissionsToFolder(gridEnginePath);
-                    } else {
-                        throw new IOException("Failed to create directory with path " + gridEnginePath);
-                    }
-                } catch (final Exception exception) {
-                    throw new IllegalArgumentException("Failed to create a directory by provided path: "
-                            + gridEnginePath + ". " + exception.getMessage());
+            checkIfFolderNotExistsAndCreate(gridEnginePath);
+            return properDir.toString();
+        }
+    }
+
+    @SuppressWarnings("PMD.PreserveStackTrace")
+    private static void checkIfFolderNotExistsAndCreate(final File folderToCreate) {
+        if (!folderToCreate.exists()) {
+            try {
+                if (folderToCreate.mkdirs()) {
+                    log.info("Directory with path " + folderToCreate + " was created.");
+                    grantAllPermissionsToFolder(folderToCreate);
+                } else {
+                    throw new IOException("Failed to create directory with path " + folderToCreate);
                 }
+            } catch (final Exception exception) {
+                throw new IllegalArgumentException("Failed to create a directory by provided path: "
+                        + folderToCreate + ". " + exception.getMessage());
             }
         }
-        return properDir.toString();
     }
 
     @SuppressWarnings("PMD.PreserveStackTrace")
