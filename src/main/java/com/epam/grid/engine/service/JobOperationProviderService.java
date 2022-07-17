@@ -94,8 +94,14 @@ public class JobOperationProviderService {
      * @return Running job.
      */
     public Job runJob(final JobOptions options) {
-        if (options.getWorkingDir() != null) {
-            options.setWorkingDir(DirectoryPathUtils.buildProperDir(options.getWorkingDir(), gridSharedFolder));
+        final String workingDir = options.getWorkingDir();
+        if (workingDir != null) {
+            final String properDir = DirectoryPathUtils.buildProperDir(gridSharedFolder, options.getWorkingDir())
+                    .toString();
+            if (!workingDir.equals(properDir)) {
+                options.setWorkingDir(properDir);
+                log.info("Working directory was changed from " + workingDir + " to " + properDir);
+            }
         }
         return jobProvider.runJob(options);
     }

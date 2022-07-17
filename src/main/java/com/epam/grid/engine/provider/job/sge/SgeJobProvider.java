@@ -131,7 +131,7 @@ public class SgeJobProvider implements JobProvider {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = DirectoryPathUtils.buildProperDir(gridSharedFolder, logDir);
+        this.logDir = DirectoryPathUtils.buildProperDir(gridSharedFolder, logDir).toString();
     }
 
     /**

@@ -22,8 +22,8 @@ package com.epam.grid.engine.provider.utils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -35,7 +35,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DirectoryPathUtils {
-    private static final String FORWARDSLASH = "/";
     private static final String ALL_PERMISSIONS_STRING = "rwxrw-rw-";
 
     /**
@@ -49,55 +48,39 @@ public final class DirectoryPathUtils {
      * @return Adjusted directory path with added primary directory added if needed
      */
     @SuppressWarnings("PMD.PreserveStackTrace")
-    public static String buildProperDir(final String rootFolder, final String nestedFolder) {
-        final StringBuilder properDir = new StringBuilder();
-        final File nestedFolderPath = new File(nestedFolder);
-        if (nestedFolderPath.isAbsolute()) {
+    public static Path buildProperDir(final String rootFolder, final String nestedFolder) {
+        Path processingPath = Path.of(nestedFolder);
+        if (processingPath.isAbsolute()) {
             if (!nestedFolder.startsWith(rootFolder)) {
                 throw new IllegalStateException("Nested folder path is absolute, but doesn't start with "
                         + "grid.engine.shared.folder");
             }
-            checkIfFolderNotExistsAndCreate(nestedFolderPath);
-            return properDir.append(nestedFolderPath).toString();
         } else {
-            Paths.get(rootFolder).;
-            if (rootFolder.endsWith(FORWARDSLASH)) {
-                properDir.append(rootFolder).append(nestedFolderPath);
-            } else {
-                properDir.append(rootFolder).append(FORWARDSLASH).append(nestedFolderPath);
-            }
-            log.info("Nested folder path was changed to " + properDir);
-            final File gridEnginePath = new File(properDir.toString());
-            checkIfFolderNotExistsAndCreate(gridEnginePath);
-            return properDir.toString();
+            processingPath = Paths.get(rootFolder, nestedFolder);
+            log.info("Nested folder path was changed to " + processingPath);
         }
+        checkIfFolderNotExistsAndCreate(processingPath);
+        return processingPath;
     }
 
-    @SuppressWarnings("PMD.PreserveStackTrace")
-    private static void checkIfFolderNotExistsAndCreate(final File folderToCreate) {
-        if (!folderToCreate.exists()) {
+    private static void checkIfFolderNotExistsAndCreate(final Path folderToCreate) {
+        if (!Files.exists(folderToCreate)) {
             try {
-                if (folderToCreate.mkdirs()) {
+                if (folderToCreate.toFile().mkdirs()) {
                     log.info("Directory with path " + folderToCreate + " was created.");
                     grantAllPermissionsToFolder(folderToCreate);
                 } else {
-                    throw new IOException("Failed to create directory with path " + folderToCreate);
+                    throw new IllegalArgumentException("Failed to create directory with path " + folderToCreate);
                 }
             } catch (final Exception exception) {
                 throw new IllegalArgumentException("Failed to create a directory by provided path: "
-                        + folderToCreate + ". " + exception.getMessage());
+                        + folderToCreate + ". " + exception.getMessage(), exception);
             }
         }
     }
 
-    @SuppressWarnings("PMD.PreserveStackTrace")
-    private static void grantAllPermissionsToFolder(final File directory) {
-        try {
-            final Set<PosixFilePermission> permissions = PosixFilePermissions.fromString(ALL_PERMISSIONS_STRING);
-            Files.setPosixFilePermissions(directory.toPath(), permissions);
-        } catch (final IOException exception) {
-            throw new IllegalArgumentException("Failed to grant permissions to the provided directory "
-                    + directory + ". " + exception.getMessage());
-        }
+    private static void grantAllPermissionsToFolder(final Path directory) throws IOException {
+        final Set<PosixFilePermission> permissions = PosixFilePermissions.fromString(ALL_PERMISSIONS_STRING);
+        Files.setPosixFilePermissions(directory, permissions);
     }
 }
