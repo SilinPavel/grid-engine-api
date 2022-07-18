@@ -47,7 +47,6 @@ public final class DirectoryPathUtils {
      * @param rootFolder   Primary working directory from properties
      * @return Adjusted directory path with added primary directory added if needed
      */
-    @SuppressWarnings("PMD.PreserveStackTrace")
     public static Path buildProperDir(final String rootFolder, final String nestedFolder) {
         Path processingPath = Path.of(nestedFolder);
         if (processingPath.isAbsolute()) {
