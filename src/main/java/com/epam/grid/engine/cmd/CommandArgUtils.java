@@ -47,7 +47,23 @@ public class CommandArgUtils {
     private static final char BACKSLASH = '\\';
 
     /**
-     * This method forms a command structure from a string command.
+     * This method forms a command structure from a prepared string by command template.
+     *
+     * <p> It iterates over the received string character by character. The command line will be split
+     * into tokens by the whitespace characters. One or more whitespace characters count as one delimiter.
+     *
+     * <p> If it comes across an unescaped quote character (the previous character was not a backslash) - next
+     * some characters will be a token until it comes across next an unescaped quote.
+     *
+     * <p> If quotes will be used in the token, they must be additionally escaped with a slash, and the token
+     * itself in the command template must be enclosed in quotes. Also, the token in the command template
+     * must be enclosed in quotes if  whitespace characters are to be used in it.
+     *
+     * <blockquote>For example, the command string
+     * <p><b> {@code "  firstToken  \"second token\"  \"third token with \\"quotes\\"   \""}</b>
+     * <p> yields the following result
+     * <p><b> {@code {"firstToken", "second token", "third token with \"quotes\"   "}}</b>
+     * </blockquote>
      *
      * @param command The command from the template engine.
      * @return The command's structure that is ready for execution.
@@ -67,38 +83,38 @@ public class CommandArgUtils {
                 }
                 isToken = true;
             }
-
             if (ch == QUOTE && token.length() == 0) {
                 isQuote = true;
                 continue;
             }
-
             if (isQuote) {
-                if (ch == BACKSLASH) {
-                    backslashes++;
-                    continue;
-                }
-                if (ch == QUOTE) {
-                    if (backslashes == 0) {
-                        result.add(token.toString());
-                        token.setLength(0);
-                        isToken = false;
-                        isQuote = false;
+                switch (ch) {
+                    case BACKSLASH:
+                        backslashes++;
                         continue;
-                    }
-                    backslashes--;
+                    case QUOTE:
+                        if (backslashes == 0) {
+                            result.add(token.toString());
+                            token.setLength(0);
+                            isToken = false;
+                            isQuote = false;
+                            continue;
+                        }
+                        backslashes--;
+                        break;
+                    default:
                 }
                 if (backslashes > 0) {
                     IntStream.range(0, backslashes).forEach((index) -> token.append(BACKSLASH));
                     backslashes = 0;
                 }
-            }
-
-            if (!isQuote && isWhitespaceCharacter(ch)) {
-                result.add(token.toString());
-                token.setLength(0);
-                isToken = false;
-                continue;
+            } else {
+                if (isWhitespaceCharacter(ch)) {
+                    result.add(token.toString());
+                    token.setLength(0);
+                    isToken = false;
+                    continue;
+                }
             }
             token.append(ch);
         }
