@@ -24,11 +24,10 @@ import com.epam.grid.engine.cmd.CommandArgUtils;
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
-import com.epam.grid.engine.entity.EngineType;
+import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.job.Job;
-import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.entity.job.JobState;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
@@ -51,10 +50,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -68,7 +63,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.epam.grid.engine.provider.utils.CommandsUtils.mergeOutputLines;
-import static com.epam.grid.engine.utils.TextConstants.DOT;
 import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 import static com.epam.grid.engine.utils.TextConstants.NEW_LINE_DELIMITER;
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
@@ -81,8 +75,6 @@ import static com.epam.grid.engine.utils.TextConstants.SPACE;
 @ConditionalOnProperty(name = "grid.engine.type", havingValue = "SGE")
 public class SgeJobProvider implements JobProvider {
 
-    private static final String GET_LOG_LINES_COMMAND = "get_log_lines";
-    private static final String GET_LOGFILE_INFO_COMMAND = "get_logfile_info";
     private static final String HAS_DELETED_JOB = "has deleted job";
     private static final String JOB_FILTER = "filter";
     private static final String JOB_STATE = "state";
@@ -93,10 +85,7 @@ public class SgeJobProvider implements JobProvider {
     private static final String OPTIONS = "options";
     private static final String LOG_DIR = "logDir";
     private static final String ENV_VARIABLES = "envVariables";
-    private static final String CANT_FIND_LOG_FILE = "Can't find the job with id = %d or the job log file.";
-    private static final String CANT_PARSE_WC_CMD_RESPONSE = "Can't parse wc-command response on the server.";
     private static final String EXECUTION_RESULT = "Execution result - ";
-    private static final String WC_COMMAND_REGEX_PATTERN = "^\\d+ \\d+ .+";
     private static final Pattern FIND_ID_PATTERN = Pattern.compile("\\s\\d+\\s");
     private static final Pattern FIND_DELETE_ID_PATTERN = Pattern.compile("\\d+");
 
@@ -157,8 +146,8 @@ public class SgeJobProvider implements JobProvider {
      * @return The type of engine being executed.
      */
     @Override
-    public EngineType getProviderType() {
-        return EngineType.SGE;
+    public CommandType getProviderType() {
+        return CommandType.SGE;
     }
 
     /**
@@ -183,70 +172,6 @@ public class SgeJobProvider implements JobProvider {
     public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
         validateDeleteRequest(deleteJobFilter);
         return parseDeleteCommandResult(makeQdelCommand(deleteJobFilter));
-    }
-
-    /**
-     * This method provides information about the log file and obtains the specified number of lines from it.
-     *
-     * @param jobId    The job identifier.
-     * @param logType  The log file type to obtain information from.
-     * @param lines    The number of lines.
-     * @param fromHead if it's true, lines are taken from the head of the log file, otherwise from the tail.
-     * @return The object of {@link JobLogInfo}
-     */
-    @Override
-    public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType,
-                                    final int lines, final boolean fromHead) {
-        if (lines < 0) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    String.format("The 'lines' parameter can't be < 0, received value = %d", lines));
-        }
-        final Context context = new Context();
-        context.setVariable("path", getLogFilePath(jobId, logType));
-        context.setVariable("lines", lines);
-        context.setVariable("fromHead", fromHead);
-
-        final CommandResult resultLogFileInfoCommand = simpleCmdExecutor.execute(
-                commandCompiler.compileCommand(getProviderType(), GET_LOGFILE_INFO_COMMAND, context));
-        final CommandResult resultLogLinesCommand = simpleCmdExecutor.execute(
-                commandCompiler.compileCommand(getProviderType(), GET_LOG_LINES_COMMAND, context));
-
-        if (resultLogFileInfoCommand.getExitCode() != 0 || resultLogLinesCommand.getExitCode() != 0) {
-            throw new GridEngineException(HttpStatus.NOT_FOUND, String.format(CANT_FIND_LOG_FILE, jobId));
-        }
-        final String wcCommandResult = resultLogFileInfoCommand.getStdOut().stream()
-                .findFirst()
-                .orElseThrow(() -> new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        CANT_PARSE_WC_CMD_RESPONSE))
-                .trim();
-        if (!wcCommandResult.matches(WC_COMMAND_REGEX_PATTERN)) {
-            throw new GridEngineException(HttpStatus.INTERNAL_SERVER_ERROR, CANT_PARSE_WC_CMD_RESPONSE);
-        }
-        final String[] splitWcCommandResult = wcCommandResult.split(SPACE);
-
-        return JobLogInfo.builder()
-                .jobId(jobId)
-                .type(logType)
-                .lines(resultLogLinesCommand.getStdOut())
-                .totalCount(Integer.parseInt(splitWcCommandResult[0]))
-                .bytes(Integer.parseInt(splitWcCommandResult[1]))
-                .build();
-    }
-
-    /**
-     * Gets a job log file.
-     *
-     * @param jobId   The job identifier.
-     * @param logType The type of required log file.
-     * @return The job log file like a byte array.
-     */
-    @Override
-    public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
-        try {
-            return new BufferedInputStream(new FileInputStream(getLogFilePath(jobId, logType)));
-        } catch (final IOException e) {
-            throw new GridEngineException(HttpStatus.NOT_FOUND, String.format(CANT_FIND_LOG_FILE, jobId), e);
-        }
     }
 
     /**
@@ -370,10 +295,6 @@ public class SgeJobProvider implements JobProvider {
                 || StringUtils.hasText(options.getName())
                 && (options.getMin() > 0 || options.getMax() > 0)
                 && (options.getMax() == 0 || options.getMin() < options.getMax());
-    }
-
-    private String getLogFilePath(final int jobId, final JobLogInfo.Type logType) {
-        return logDir + jobId + DOT + logType.getSuffix();
     }
 
     private List<Long> parseDeletedJobId(final List<String> stdOut) {

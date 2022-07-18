@@ -24,16 +24,13 @@ import com.epam.grid.engine.entity.job.DeleteJobFilter;
 import com.epam.grid.engine.entity.job.DeletedJobInfo;
 import com.epam.grid.engine.entity.job.Job;
 import com.epam.grid.engine.entity.Listing;
-import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.entity.job.JobOptions;
-import com.epam.grid.engine.provider.GridProviderAware;
-
-import java.io.InputStream;
+import com.epam.grid.engine.provider.CommandTypeAware;
 
 /**
  * This interface specifies methods for the job provider.
  */
-public interface JobProvider extends GridProviderAware {
+public interface JobProvider extends CommandTypeAware {
 
     /**
      * Gets a list of jobs for the specified filters.
@@ -58,25 +55,5 @@ public interface JobProvider extends GridProviderAware {
      * @return Launched job.
      */
     Job runJob(JobOptions options);
-
-    /**
-     * This method provides information about the log file and obtains the specified number of lines from it.
-     *
-     * @param jobId    The job identifier.
-     * @param logType  The log file type to obtain information from.
-     * @param lines    The number of lines.
-     * @param fromHead if it's true, lines are taken from the head of the log file, otherwise from the tail.
-     * @return The object of {@link JobLogInfo}
-     */
-    JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType, final int lines, final boolean fromHead);
-
-    /**
-     * Gets a job log file.
-     *
-     * @param jobId   The job identifier.
-     * @param logType The type of required log file.
-     * @return The job log file like a stream.
-     */
-    InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType);
 
 }

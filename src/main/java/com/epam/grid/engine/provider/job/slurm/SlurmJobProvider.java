@@ -24,14 +24,13 @@ import com.epam.grid.engine.cmd.CommandArgUtils;
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
-import com.epam.grid.engine.entity.EngineType;
+import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.job.Job;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.entity.job.JobState;
 import com.epam.grid.engine.entity.job.DeletedJobInfo;
-import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
 import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.mapper.job.slurm.SlurmJobMapper;
@@ -49,7 +48,6 @@ import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 import org.apache.commons.collections4.CollectionUtils;
 
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -131,8 +129,8 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     @Override
-    public EngineType getProviderType() {
-        return EngineType.SLURM;
+    public CommandType getProviderType() {
+        return CommandType.SLURM;
     }
 
     @Override
@@ -199,17 +197,6 @@ public class SlurmJobProvider implements JobProvider {
             CommandsUtils.throwExecutionDetails(result, HttpStatus.NOT_FOUND);
         }
         return new DeletedJobInfo(deletedJobIds, jobOwner);
-    }
-
-    @Override
-    public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType, final int lines,
-                                    final boolean fromHead) {
-        throw new UnsupportedOperationException("Job log info retrieving operation haven't implemented yet");
-    }
-
-    @Override
-    public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
-        throw new UnsupportedOperationException("Job log info file retrieving operation haven't implemented yet");
     }
 
     /**

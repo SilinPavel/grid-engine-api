@@ -28,6 +28,7 @@ import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.provider.job.JobProvider;
 
+import com.epam.grid.engine.provider.log.JobLogProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class JobOperationProviderService {
 
     private final String logDir;
     private final JobProvider jobProvider;
+    private final JobLogProvider jobLogProvider;
 
     /**
      * Constructor, sets created jobProvider bean to the class field and the path to job log.
@@ -57,8 +59,11 @@ public class JobOperationProviderService {
      * @see JobProvider
      */
 
-    public JobOperationProviderService(final JobProvider jobProvider, @Value("${job.log.dir}") final String logDir) {
+    public JobOperationProviderService(final JobProvider jobProvider,
+                                       final JobLogProvider jobLogProvider,
+                                       @Value("${job.log.dir}") final String logDir) {
         this.jobProvider = jobProvider;
+        this.jobLogProvider = jobLogProvider;
         this.logDir = logDir;
     }
 
@@ -104,7 +109,7 @@ public class JobOperationProviderService {
      */
     public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType,
                                     final int lines, final boolean fromHead) {
-        return jobProvider.getJobLogInfo(jobId, logType, lines, fromHead);
+        return jobLogProvider.getJobLogInfo(jobId, logType, lines, fromHead);
     }
 
     /**
@@ -116,7 +121,7 @@ public class JobOperationProviderService {
      * @return The job log file like a stream.
      */
     public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
-        return jobProvider.getJobLogFile(jobId, logType);
+        return jobLogProvider.getJobLogFile(jobId, logType);
     }
 
     /**
@@ -133,5 +138,4 @@ public class JobOperationProviderService {
             throw new IllegalStateException(message);
         }
     }
-
 }

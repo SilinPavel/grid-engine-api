@@ -22,7 +22,7 @@ package com.epam.grid.engine.provider.job.slurm;
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
-import com.epam.grid.engine.entity.EngineType;
+import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
@@ -166,7 +166,7 @@ public class SlurmJobProviderTest {
                 .build();
 
         mockCommandCompilation(SQUEUE_COMMAND, commandResult, ALL_FORMAT);
-        Assertions.assertEquals(EngineType.SLURM, slurmJobProvider.getProviderType());
+        Assertions.assertEquals(CommandType.SLURM, slurmJobProvider.getProviderType());
         final JobFilter jobFilter = new JobFilter();
         final Throwable thrown = Assertions.assertThrows(GridEngineException.class, () ->
                 slurmJobProvider.filterJobs(jobFilter));
@@ -184,7 +184,7 @@ public class SlurmJobProviderTest {
         final List<Job> result = slurmJobProvider.filterJobs(new JobFilter()).getElements();
 
         Assertions.assertNull(result);
-        Assertions.assertEquals(EngineType.SLURM, slurmJobProvider.getProviderType());
+        Assertions.assertEquals(CommandType.SLURM, slurmJobProvider.getProviderType());
     }
 
     @Test
@@ -314,7 +314,7 @@ public class SlurmJobProviderTest {
     private void mockCommandCompilation(final String command, final CommandResult commandResult,
                                         final String... compiledArray) {
         doReturn(compiledArray).when(mockCommandCompiler)
-                .compileCommand(Mockito.eq(EngineType.SLURM), Mockito.matches(command), Mockito.any());
+                .compileCommand(Mockito.eq(CommandType.SLURM), Mockito.matches(command), Mockito.any());
         doReturn(commandResult).when(mockCmdExecutor).execute(compiledArray);
     }
 
