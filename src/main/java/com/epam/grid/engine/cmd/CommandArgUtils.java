@@ -50,7 +50,7 @@ public class CommandArgUtils {
      * This method forms a command structure from a prepared string by command template.
      *
      * <p> It iterates over the received string character by character. The command line will be split
-     * into tokens by the whitespace characters. One or more whitespace characters count as one delimiter.
+     * into tokens by the whitespace characters.
      *
      * <p> If it comes across an unescaped quote character (the previous character was not a backslash) - next
      * some characters will be a token until it comes across next an unescaped quote.
@@ -73,56 +73,45 @@ public class CommandArgUtils {
         final StringBuilder token = new StringBuilder();
 
         boolean isQuote = false;
-        boolean isToken = false;
         int backslashes = 0;
 
         for (final char ch : command.toCharArray()) {
-            if (!isToken) {
-                if (isWhitespaceCharacter(ch)) {
-                    continue;
-                }
-                isToken = true;
-            }
-            if (ch == QUOTE && token.length() == 0) {
+            if (ch == QUOTE && token.length() == 0 && backslashes == 0) {
                 isQuote = true;
-                continue;
-            }
-            if (isQuote) {
-                switch (ch) {
-                    case BACKSLASH:
-                        backslashes++;
-                        continue;
-                    case QUOTE:
-                        if (backslashes == 0) {
-                            result.add(token.toString());
-                            token.setLength(0);
-                            isToken = false;
-                            isQuote = false;
-                            continue;
-                        }
-                        backslashes--;
-                        break;
-                    default:
-                }
-                if (backslashes > 0) {
-                    IntStream.range(0, backslashes).forEach((index) -> token.append(BACKSLASH));
-                    backslashes = 0;
-                }
             } else {
-                if (isWhitespaceCharacter(ch)) {
-                    result.add(token.toString());
-                    token.setLength(0);
-                    isToken = false;
-                    continue;
+                if (isQuote) {
+                    switch (ch) {
+                        case BACKSLASH:
+                            backslashes++;
+                            continue;
+                        case QUOTE:
+                            if (backslashes == 0) {
+                                result.add(token.toString());
+                                token.setLength(0);
+                                isQuote = false;
+                                continue;
+                            }
+                            backslashes--;
+                            break;
+                        default:
+                    }
+                    if (backslashes > 0) {
+                        IntStream.range(0, backslashes).forEach((index) -> token.append(BACKSLASH));
+                        backslashes = 0;
+                    }
+                } else {
+                    if (isWhitespaceCharacter(ch)) {
+                        result.add(token.toString());
+                        token.setLength(0);
+                        continue;
+                    }
                 }
+                token.append(ch);
             }
-            token.append(ch);
         }
 
-        if (token.length() != 0) {
-            result.add(token.toString());
-        }
-        return result.toArray(new String[0]);
+        result.add(token.toString().trim());
+        return result.stream().filter(t -> !t.isEmpty()).toArray(String[]::new);
     }
 
     private static boolean isWhitespaceCharacter(final char ch) {

@@ -54,6 +54,9 @@ class CommandArgUtilsTest {
                 Arguments.of("qhost\r\n\r\n-h\r\n \r\n current_host\r\n \r\n\r\n-xml\r\n",
                         new String[]{"qhost", "-h", "current_host", "-xml"}),
 
+                Arguments.of("\"\\\" \t some test argument \\\"\"",
+                        new String[]{"\" \t some test argument \""}),
+
                 Arguments.of("sbatch --export\n\n    \n    \n        \"ALL,additionalProp1=\\\"a value with spaces\\"
                                 + "\",additionalProp2=\\\"a value with \\\"quotes and spaces\\\"\\\",additionalProp3"
                                 + "=\\\"a value with \\\\\"an escaped quotes\\\\\"\\\"\"\n    \n\n\n\n\n    --job-na"
