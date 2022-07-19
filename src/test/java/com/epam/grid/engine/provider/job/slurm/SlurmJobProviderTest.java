@@ -384,7 +384,7 @@ public class SlurmJobProviderTest {
     }
 
     @Test
-    public void shouldThrowUnsupportedExceptionWhenPassedPEOptionsToJobSubmitting() {
+    public void shouldThrowUnsupportedExceptionWhenPassedPeOptionsToJobSubmitting() {
         final JobOptions jobOptions = JobOptions.builder().command(JOB_NAME1)
                 .parallelEnvOptions(new ParallelEnvOptions(EMPTY_STRING, 1, 10))
                 .build();
