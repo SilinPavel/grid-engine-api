@@ -37,6 +37,7 @@ import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 /**
  * This class defines operations for processing information from the user
@@ -94,15 +95,15 @@ public class JobOperationProviderService {
      * @return Running job.
      */
     public Job runJob(final JobOptions options) {
-        final String workingDir = options.getWorkingDir();
-        if (workingDir != null) {
-            final String properDir = DirectoryPathUtils.buildProperDir(gridSharedFolder, options.getWorkingDir())
+        Optional.ofNullable(options.getWorkingDir()).ifPresent(workingDir -> {
+            final String absolutePath = DirectoryPathUtils
+                    .resolvePathToAbsolute(gridSharedFolder, workingDir)
                     .toString();
-            if (!workingDir.equals(properDir)) {
-                options.setWorkingDir(properDir);
-                log.info("Working directory was changed from " + workingDir + " to " + properDir);
+            if (!workingDir.equals(absolutePath)) {
+                options.setWorkingDir(absolutePath);
+                log.info("Working directory was changed from " + workingDir + " to " + absolutePath);
             }
-        }
+        });
         return jobProvider.runJob(options);
     }
 

@@ -38,24 +38,24 @@ public final class DirectoryPathUtils {
     private static final String ALL_PERMISSIONS_STRING = "rwxrw-rw-";
 
     /**
-     * If nestedFolder directory has absolute path, checks, that it begins with rootFolder and exists, creates if
+     * If path directory has absolute path, checks, that it begins with root and exists, creates if
      * needed.
-     * If nestedFolder directory has relative path, adds rootFolder to its beginning, checks its existence and
+     * If path directory has relative path, adds root to its beginning, checks its existence and
      * creates, if needed.
      *
-     * @param nestedFolder Directory, which should be checked for correction path
-     * @param rootFolder   Primary working directory from properties
+     * @param path Directory, which should be checked for correction path
+     * @param root   Primary working directory from properties
      * @return Adjusted directory path with added primary directory added if needed
      */
-    public static Path buildProperDir(final String rootFolder, final String nestedFolder) {
-        Path processingPath = Path.of(nestedFolder);
+    public static Path resolvePathToAbsolute(final String root, final String path) {
+        Path processingPath = Path.of(path);
         if (processingPath.isAbsolute()) {
-            if (!nestedFolder.startsWith(rootFolder)) {
+            if (!path.startsWith(root)) {
                 throw new IllegalStateException("Nested folder path is absolute, but doesn't start with "
                         + "grid.engine.shared.folder");
             }
         } else {
-            processingPath = Paths.get(rootFolder, nestedFolder);
+            processingPath = Paths.get(root, path);
             log.info("Nested folder path was changed to " + processingPath);
         }
         checkIfFolderNotExistsAndCreate(processingPath);
