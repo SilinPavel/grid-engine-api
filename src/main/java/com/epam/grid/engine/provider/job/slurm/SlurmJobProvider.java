@@ -39,6 +39,7 @@ import com.epam.grid.engine.provider.job.JobProvider;
 
 import com.epam.grid.engine.provider.utils.CommandsUtils;
 import com.epam.grid.engine.provider.utils.slurm.job.SacctCommandParser;
+import com.epam.grid.engine.utils.TextConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -227,7 +228,11 @@ public class SlurmJobProvider implements JobProvider {
         context.setVariable(ENV_VARIABLES, CommandArgUtils.envVariablesMapToString(options.getEnvVariables()));
 
         if (options.isCanBeBinary()) {
-            context.setVariable(BINARY_COMMAND, CommandArgUtils.toEscapeQuotes(options.getCommand()));
+            final String binaryCommandArguments = options.getArguments().stream()
+                    .map(CommandArgUtils::toEncloseInQuotes)
+                    .map(CommandArgUtils::toEscapeQuotes)
+                    .collect(Collectors.joining(TextConstants.SPACE));
+            context.setVariable(BINARY_COMMAND, options.getCommand() + TextConstants.SPACE + binaryCommandArguments);
         } else {
             context.setVariable(ARGUMENTS, CommandArgUtils.toEscapeQuotes(options.getArguments()));
         }
@@ -240,10 +245,6 @@ public class SlurmJobProvider implements JobProvider {
         }
         if (options.getPriority() != null && (options.getPriority() < 0 || options.getPriority() > MAX_SENT_PRIORITY)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and 4_294_967_294");
-        }
-        if (options.isCanBeBinary() && !options.getArguments().isEmpty()) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    "Command arguments are not permitted with the canBeBinary option!");
         }
         if (options.getParallelEnvOptions() != null) {
             throw new UnsupportedOperationException("Parallel environment variables are not supported yet!");

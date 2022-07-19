@@ -82,7 +82,6 @@ public class SlurmJobProviderTest {
     private static final String JOB_PRIORITY1 = "0.99998474121093";
     private static final String JOB_PRIORITY2 = "0.99998474074527";
     private static final String JOB_PRIORITY3 = "0.00000000000000";
-    private static final String SOME_ARGUMENT = "someArgument";
     private static final long SOME_WRONG_SENT_PRIORITY = -10L;
     private static final long SECOND_WRONG_SENT_PRIORITY = 4_294_967_295L;
 
@@ -377,9 +376,7 @@ public class SlurmJobProviderTest {
                 Arguments.of(JobOptions.builder().command(null).build()),
                 Arguments.of(JobOptions.builder().command(EMPTY_STRING).build()),
                 Arguments.of(JobOptions.builder().priority(SOME_WRONG_SENT_PRIORITY).command(JOB_NAME1).build()),
-                Arguments.of(JobOptions.builder().priority(SECOND_WRONG_SENT_PRIORITY).command(JOB_NAME1).build()),
-                Arguments.of(JobOptions.builder().command(JOB_NAME1).canBeBinary(true)
-                        .arguments(List.of(SOME_ARGUMENT)).build())
+                Arguments.of(JobOptions.builder().priority(SECOND_WRONG_SENT_PRIORITY).command(JOB_NAME1).build())
         );
     }
 
