@@ -39,10 +39,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.thymeleaf.context.IContext;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -91,6 +93,12 @@ public class SlurmJobProviderTest {
     private static final String SOME_CORRECT_JOB_ID_STRING = Long.toString(SOME_CORRECT_JOB_ID);
     private static final long SOME_WRONG_JOB_ID = 0L;
 
+    private static final String BINARY_COMMAND = "binaryCommand";
+    private static final String SOME_BINARY_COMMAND = "echo";
+    private static final String SOME_ARGUMENT = "someArgument";
+    private static final String SOME_ARGUMENT_WITH_SPACES = "some argument with spaces";
+    private static final String SOME_JOB_IS_SUBMITTED = "Submitted batch job " + SOME_CORRECT_JOB_ID_STRING;
+
     private static final List<String> EMPTY_LIST = Collections.EMPTY_LIST;
     private static final String SQUEUE_COMMAND_EXECUTION_HEADER = "ACCOUNT|TRES_PER_NODE|MIN_CPUS|MIN_TMP_DISK|"
             + "END_TIME|FEATURES|GROUP|OVER_SUBSCRIBE|JOBID|NAME|COMMENT|TIME_LIMIT|MIN_MEMORY|REQ_NODES|"
@@ -128,7 +136,7 @@ public class SlurmJobProviderTest {
             "(null)|N/A|1|0|2022-05-18T10:29:10|(null)|root|OK|2|test.sh|(null)|5-00:00:00|500M||/data/test.sh");
 
     private static final String TEXT_JOB_SUBMITTED = "Submitted batch job " + SOME_CORRECT_JOB_ID_STRING;
-    private static final String SBATCH = "sbatch";
+    private static final String SBATCH_COMMAND = "sbatch";
     private static final String ENV_VAR_KEY = "parameter1";
     private static final String ENV_VAR_VALUE = "some value with spaces";
     private static final String ENV_VAR_COMMAND_ARG = String.format("%s=%s", ENV_VAR_KEY, ENV_VAR_VALUE);
@@ -136,7 +144,7 @@ public class SlurmJobProviderTest {
     private static final String JOB_PARTITION = "normal";
     private static final String JOB_WORK_DIR = "/data/";
 
-    private static final String SCANCEL = "scancel";
+    private static final String SCANCEL_COMMAND = "scancel";
     private static final String VERBOSE_KEY = "-v";
     private static final String TERMINATING_JOB_PREFIX = "scancel: Terminating job ";
     private static final String ERROR_DELETING_STRING_TEMPLATE =
@@ -364,6 +372,33 @@ public class SlurmJobProviderTest {
                 .build();
     }
 
+    @Test
+    public void shouldPassValidContextToCommandEngineWhenBinaryCommandSubmitting() {
+        final JobOptions testJobOptions = JobOptions.builder()
+                .canBeBinary(true)
+                .command(SOME_BINARY_COMMAND)
+                .arguments(List.of(SOME_ARGUMENT, SOME_ARGUMENT_WITH_SPACES))
+                .build();
+
+        final String binaryContextArgument = String.format("%s \\\"%s\\\" \\\"%s\\\"", SOME_BINARY_COMMAND,
+                SOME_ARGUMENT, SOME_ARGUMENT_WITH_SPACES);
+
+        final CommandResult commandResult = new CommandResult(List.of(SOME_JOB_IS_SUBMITTED), 0, EMPTY_LIST);
+        doReturn(commandResult).when(mockCmdExecutor).execute(Mockito.any());
+
+        Assertions.assertDoesNotThrow(() -> slurmJobProvider.runJob(testJobOptions));
+
+        final ArgumentCaptor<IContext> contextCaptor = ArgumentCaptor.forClass(IContext.class);
+        final ArgumentCaptor<String> commandCaptor = ArgumentCaptor.forClass(String.class);
+        Mockito.verify(mockCommandCompiler).compileCommand(Mockito.any(), commandCaptor.capture(),
+                contextCaptor.capture());
+
+        Assertions.assertEquals(SBATCH_COMMAND, commandCaptor.getValue());
+        Assertions.assertEquals(binaryContextArgument, contextCaptor.getValue().getVariable(BINARY_COMMAND));
+    }
+
+
+
     @ParameterizedTest
     @MethodSource("provideInvalidJobOptions")
     public void shouldThrowWhenPassedIllegalJobOptionsToJobSubmitting(final JobOptions jobOptions) {
@@ -399,7 +434,7 @@ public class SlurmJobProviderTest {
         commandResult.setStdOut(Collections.singletonList(TEXT_JOB_SUBMITTED));
         commandResult.setStdErr(EMPTY_LIST);
 
-        mockCommandCompilation(SBATCH, commandResult, command);
+        mockCommandCompilation(SBATCH_COMMAND, commandResult, command);
         final Job result = slurmJobProvider.runJob(jobOptions);
 
         Assertions.assertEquals(expectedFilteredJob.getId(), result.getId());
@@ -407,11 +442,11 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideCorrectSbatchCommands() {
         return Stream.of(
-                    new String[]{SBATCH, "--export=", ENV_VAR_COMMAND_ARG, JOB_NAME1},
-                    new String[]{SBATCH, "--priority=", JOB_PRIORITY4, JOB_NAME1},
-                    new String[]{SBATCH, "-J", JOB_NAME3, JOB_NAME1},
-                    new String[]{SBATCH, "--partition=", JOB_PARTITION, JOB_NAME1},
-                    new String[]{SBATCH, "-D", JOB_WORK_DIR, JOB_NAME1})
+                    new String[]{SBATCH_COMMAND, "--export=", ENV_VAR_COMMAND_ARG, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "--priority=", JOB_PRIORITY4, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "-J", JOB_NAME3, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "--partition=", JOB_PARTITION, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "-D", JOB_WORK_DIR, JOB_NAME1})
                 .map((t) -> (Object) t)
                 .map(Arguments::of);
     }
@@ -426,7 +461,7 @@ public class SlurmJobProviderTest {
         commandResult.setStdOut(Collections.singletonList(TEXT_JOB_SUBMITTED));
         commandResult.setStdErr(EMPTY_LIST);
 
-        mockCommandCompilation(SBATCH, commandResult, SBATCH, JOB_NAME1);
+        mockCommandCompilation(SBATCH_COMMAND, commandResult, SBATCH_COMMAND, JOB_NAME1);
         final Job result = slurmJobProvider.runJob(jobOptions);
 
         Assertions.assertEquals(expectedFilteredJob, result);
@@ -454,7 +489,7 @@ public class SlurmJobProviderTest {
 
         final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0,
                 Collections.singletonList(TERMINATING_JOB_PREFIX + SOME_CORRECT_JOB_ID_STRING));
-        mockCommandCompilation(SCANCEL, scancelCommandResult, commandArgs);
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, commandArgs);
 
         final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, SOME_CORRECT_JOB_ID, passedUserName);
         final DeletedJobInfo deletedJobInfoResult = slurmJobProvider.deleteJob(testDeleteJobFilter);
@@ -465,9 +500,9 @@ public class SlurmJobProviderTest {
     static Stream<Arguments> provideValidNameCasesForRequestsToDeleteJob() {
         return Stream.of(
                 Arguments.of(SLURM_USER, null,
-                    new String[] {SCANCEL, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
+                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
                 Arguments.of(SOME_USER_NAME, SOME_USER_NAME,
-                    new String[] {SCANCEL, VERBOSE_KEY, OWNER_FILTRATION_KEY,
+                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, OWNER_FILTRATION_KEY,
                                   SOME_USER_NAME, SOME_CORRECT_JOB_ID_STRING})
         );
     }
@@ -475,7 +510,7 @@ public class SlurmJobProviderTest {
     @Test
     public void shouldReturnCorrectListDeletedJobs() {
         final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0, DELETE_ALL_USER_JOBS_STDOUT);
-        mockCommandCompilation(SCANCEL, scancelCommandResult, SCANCEL, VERBOSE_KEY,
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, SCANCEL_COMMAND, VERBOSE_KEY,
                 OWNER_FILTRATION_KEY, SOME_USER_NAME);
 
         final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
@@ -501,7 +536,8 @@ public class SlurmJobProviderTest {
     @ValueSource(ints = {0, 1})
     public void shouldThrowWhenDeletingJobsWentWrong(final int exitCode) {
         final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, exitCode, EMPTY_LIST);
-        mockCommandCompilation(SCANCEL, scancelCommandResult, VERBOSE_KEY, OWNER_FILTRATION_KEY, SOME_USER_NAME);
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult,
+                VERBOSE_KEY, OWNER_FILTRATION_KEY, SOME_USER_NAME);
 
         final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
         Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(testDeleteJobFilter));
@@ -513,7 +549,7 @@ public class SlurmJobProviderTest {
         allJobsErrorStdOut.add(String.format(ERROR_DELETING_STRING_TEMPLATE, SECOND_CORRECT_JOB_ID));
 
         final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0, allJobsErrorStdOut);
-        mockCommandCompilation(SCANCEL, scancelCommandResult, SCANCEL, VERBOSE_KEY,
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, SCANCEL_COMMAND, VERBOSE_KEY,
                 OWNER_FILTRATION_KEY, SOME_USER_NAME);
 
         final DeleteJobFilter deleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
