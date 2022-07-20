@@ -54,17 +54,20 @@ public class JobOperationProviderService {
     /**
      * Constructor, sets created jobProvider bean to the class field and the path to job log.
      *
-     * @param jobProvider created JobProvider
-     * @param logDir      the path to the directory where all log files will be stored
-     *                    occurred when processing the job
+     * @param jobProvider      created JobProvider
+     * @param logDir           the path to the directory where all log files will be stored
+     *                         occurred when processing the job
+     * @param gridSharedFolder the path to the primary directory from properties, where log and working directories
+     *                         should be stored
      * @see JobProvider
      */
 
     public JobOperationProviderService(final JobProvider jobProvider,
                                        @Value("${job.log.dir}") final String logDir,
-                                       @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
+                                       @Value("${grid.engine.shared.folder}")
+                                       final String gridSharedFolder) {
         this.jobProvider = jobProvider;
-        this.logDir = logDir;
+        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir).toString();
         this.gridSharedFolder = gridSharedFolder;
     }
 
@@ -96,12 +99,12 @@ public class JobOperationProviderService {
      */
     public Job runJob(final JobOptions options) {
         Optional.ofNullable(options.getWorkingDir()).ifPresent(workingDir -> {
-            final String absolutePath = DirectoryPathUtils
+            final String workingDirAbsolutePath = DirectoryPathUtils
                     .resolvePathToAbsolute(gridSharedFolder, workingDir)
                     .toString();
-            if (!workingDir.equals(absolutePath)) {
-                options.setWorkingDir(absolutePath);
-                log.info("Working directory was changed from " + workingDir + " to " + absolutePath);
+            if (!workingDir.equals(workingDirAbsolutePath)) {
+                options.setWorkingDir(workingDirAbsolutePath);
+                log.info("Working directory was changed from " + workingDir + " to " + workingDirAbsolutePath);
             }
         });
         return jobProvider.runJob(options);
