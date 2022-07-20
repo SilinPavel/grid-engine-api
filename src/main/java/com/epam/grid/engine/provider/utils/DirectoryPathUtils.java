@@ -44,9 +44,10 @@ public final class DirectoryPathUtils {
      * creates, if needed.
      *
      * @param path Directory, which should be checked for correction path
-     * @param root   Primary working directory from properties
+     * @param root Primary working directory from properties
      * @return Adjusted directory path with added primary directory added if needed
      */
+
     public static Path resolvePathToAbsolute(final String root, final String path) {
         Path processingPath = Path.of(path);
         if (processingPath.isAbsolute()) {
@@ -64,16 +65,15 @@ public final class DirectoryPathUtils {
 
     private static void checkIfFolderNotExistsAndCreate(final Path folderToCreate) {
         if (!Files.exists(folderToCreate)) {
-            try {
-                if (folderToCreate.toFile().mkdirs()) {
-                    log.info("Directory with path " + folderToCreate + " was created.");
+            if (folderToCreate.toFile().mkdirs()) {
+                log.info("Directory with path " + folderToCreate + " was created.");
+                try {
                     grantAllPermissionsToFolder(folderToCreate);
-                } else {
-                    throw new IllegalArgumentException("Failed to create directory with path " + folderToCreate);
+                } catch (IOException e) {
+                    throw new IllegalArgumentException("Failed to grant permissions to the path " + folderToCreate, e);
                 }
-            } catch (final Exception exception) {
-                throw new IllegalArgumentException("Failed to create a directory by provided path: "
-                        + folderToCreate + ". " + exception.getMessage(), exception);
+            } else {
+                throw new IllegalArgumentException("Failed to create directory with path " + folderToCreate);
             }
         }
     }
