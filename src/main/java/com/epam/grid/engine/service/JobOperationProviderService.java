@@ -71,7 +71,7 @@ public class JobOperationProviderService {
                                        final String gridSharedFolder) {
         this.jobProvider = jobProvider;
         this.jobLogProvider = jobLogProvider;
-        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir).toString();
+        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir);
         this.gridSharedFolder = gridSharedFolder;
     }
 
@@ -103,9 +103,8 @@ public class JobOperationProviderService {
      */
     public Job runJob(final JobOptions options) {
         Optional.ofNullable(options.getWorkingDir()).ifPresent(workingDir -> {
-            final String workingDirAbsolutePath = DirectoryPathUtils
-                    .resolvePathToAbsolute(gridSharedFolder, workingDir)
-                    .toString();
+            final String workingDirAbsolutePath =
+                    DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, workingDir);
             if (!workingDir.equals(workingDirAbsolutePath)) {
                 options.setWorkingDir(workingDirAbsolutePath);
                 log.info("Working directory was changed from " + workingDir + " to " + workingDirAbsolutePath);

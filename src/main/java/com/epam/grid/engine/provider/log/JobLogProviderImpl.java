@@ -52,7 +52,7 @@ public class JobLogProviderImpl implements JobLogProvider {
                               @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir).toString();
+        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir);
     }
 
     /**

@@ -49,7 +49,7 @@ public class JobLogProviderImplTest {
     @BeforeAll
     static void configurePathUtilsStaticMock() {
         pathUtilsStaticMock.when(() -> DirectoryPathUtils.resolvePathToAbsolute(Mockito.any(), Mockito.any()))
-                .thenReturn(Path.of(SOME_SHARED_FOLDER, SOME_LOG_DIR));
+                .thenReturn(Path.of(SOME_SHARED_FOLDER, SOME_LOG_DIR).toString());
     }
 
     @AfterAll

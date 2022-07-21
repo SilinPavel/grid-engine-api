@@ -119,7 +119,7 @@ public class SgeJobProvider implements JobProvider {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir).toString();
+        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir);
     }
 
     /**
