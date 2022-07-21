@@ -6,15 +6,20 @@ import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.exception.GridEngineException;
+import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import com.epam.grid.engine.provider.utils.sge.TestSgeConstants;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -29,14 +34,28 @@ public class JobLogProviderImplTest {
     private static final int SOME_BYTES = 150;
     private static final JobLogInfo.Type SOME_LOG_TYPE = JobLogInfo.Type.ERR;
     private static final String SOME_LOG_DIR = "/logs";
+    private static final String SOME_SHARED_FOLDER = "/mnt/shared_folder/";
     private static final String LOG_FILE_NAME = String.format("%d.%s", SOME_JOB_ID, SOME_LOG_TYPE.getSuffix());
     private static final List<String> INFO_COMMAND_RESULT_STDOUT = Collections.singletonList(
             String.format("%d %d %s", SOME_LINES, SOME_BYTES, LOG_FILE_NAME));
 
+    private static final MockedStatic<DirectoryPathUtils> pathUtilsStaticMock
+            = Mockito.mockStatic(DirectoryPathUtils.class);
     private final SimpleCmdExecutor mockCmdExecutor = Mockito.mock(SimpleCmdExecutor.class);
     private final GridEngineCommandCompiler commandCompiler = Mockito.mock(GridEngineCommandCompiler.class);
     private final JobLogProvider jobLogProvider = new JobLogProviderImpl(mockCmdExecutor, commandCompiler,
-            SOME_LOG_DIR);
+            SOME_LOG_DIR, SOME_SHARED_FOLDER);
+
+    @BeforeAll
+    static void configurePathUtilsStaticMock() {
+        pathUtilsStaticMock.when(() -> DirectoryPathUtils.resolvePathToAbsolute(Mockito.any(), Mockito.any()))
+                .thenReturn(Path.of(SOME_SHARED_FOLDER, SOME_LOG_DIR));
+    }
+
+    @AfterAll
+    static void clearPathUtilsStaticMock() {
+        pathUtilsStaticMock.close();
+    }
 
     @Test
     void shouldReturnCorrectObjectWhenGettingJobLogInfo() {

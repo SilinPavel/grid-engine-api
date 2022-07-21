@@ -80,6 +80,7 @@ public class SlurmJobProvider implements JobProvider {
     private static final String ENV_VARIABLES = "envVariables";
     private static final String START_TERMINATING_JOB_PREFIX = "scancel: Terminating job";
     private static final String KILL_JOB_ERROR_PREFIX = "scancel: error: Kill job error on job id";
+    private static final String SQUEUE_JOB_ID_ERROR_PATTERN = ".*Invalid job id specified.*";
     private static final int JOB_ID_START_POSITION = START_TERMINATING_JOB_PREFIX.length() + 1;
     private static final int ERROR_JOB_ID_POSITION = KILL_JOB_ERROR_PREFIX.length() + 1;
     private static final Pattern SUBMITTED_JOB_PATTERN = Pattern.compile("Submitted batch job (\\d+).*");
@@ -95,16 +96,6 @@ public class SlurmJobProvider implements JobProvider {
     private final SimpleCmdExecutor simpleCmdExecutor;
 
     /**
-     * Amount of fields with job data description.
-     */
-    private final int fieldsCount;
-
-    /**
-     * Message, which returns when job was not found by id.
-     */
-    private final String jobIdNotFoundMessage;
-
-    /**
      * An object that forms the structure of an executable command according to a template.
      */
     private final GridEngineCommandCompiler commandCompiler;
@@ -118,16 +109,11 @@ public class SlurmJobProvider implements JobProvider {
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
-                            @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
-                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:slurm_load_jobs error: Invalid job id specified}")
-                            final String jobIdNotFoundMessage,
                             @Value("${job.log.dir}") final String logDir,
                             @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.fieldsCount = fieldsCount;
-        this.jobIdNotFoundMessage = jobIdNotFoundMessage;
         this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir).toString();
     }
 
@@ -284,7 +270,7 @@ public class SlurmJobProvider implements JobProvider {
         if (stdOut.size() > JOB_OUTPUT_HEADER_LINES_COUNT) {
             return new Listing<>(stdOut.stream()
                     .skip(JOB_OUTPUT_HEADER_LINES_COUNT)
-                    .map(jobDataList -> SacctCommandParser.parseSlurmJob(jobDataList, fieldsCount))
+                    .map(SacctCommandParser::parseSlurmJob)
                     .filter(CollectionUtils::isNotEmpty)
                     .map(SacctCommandParser::mapJobDataToSlurmJob)
                     .map(jobMapper::slurmJobToJob)
@@ -295,7 +281,7 @@ public class SlurmJobProvider implements JobProvider {
 
     private boolean jobNotFoundByIdError(final CommandResult result) {
         return ListUtils.emptyIfNull(result.getStdErr()).stream()
-                .anyMatch(s -> !s.equals(jobIdNotFoundMessage));
+                .anyMatch(s -> !s.matches(SQUEUE_JOB_ID_ERROR_PATTERN));
     }
 
     /**

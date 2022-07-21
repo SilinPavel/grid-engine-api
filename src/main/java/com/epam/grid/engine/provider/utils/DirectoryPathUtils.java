@@ -35,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DirectoryPathUtils {
+
     private static final String ALL_PERMISSIONS_STRING = "rwxrw-rw-";
 
     /**
@@ -69,7 +70,7 @@ public final class DirectoryPathUtils {
                 log.info("Directory with path " + folderToCreate + " was created.");
                 try {
                     grantAllPermissionsToFolder(folderToCreate);
-                } catch (IOException ioException) {
+                } catch (final IOException ioException) {
                     throw new IllegalArgumentException("Failed to grant permissions to the path " + folderToCreate,
                             ioException);
                 }

@@ -6,6 +6,7 @@ import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.exception.GridEngineException;
+import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -47,10 +48,11 @@ public class JobLogProviderImpl implements JobLogProvider {
 
     public JobLogProviderImpl(final SimpleCmdExecutor simpleCmdExecutor,
                               final GridEngineCommandCompiler commandCompiler,
-                              @Value("${job.log.dir}") final String logDir) {
+                              @Value("${job.log.dir}") final String logDir,
+                              @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = logDir;
+        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir).toString();
     }
 
     /**

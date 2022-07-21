@@ -177,8 +177,8 @@ public class SlurmJobProviderTest {
         mockCommandCompilation(SQUEUE_COMMAND, commandResult, ALL_FORMAT);
         Assertions.assertEquals(CommandType.SLURM, slurmJobProvider.getProviderType());
         final JobFilter jobFilter = new JobFilter();
-        final Throwable thrown = Assertions.assertThrows(GridEngineException.class, () ->
-                slurmJobProvider.filterJobs(jobFilter));
+        final Throwable thrown = Assertions.assertThrows(GridEngineException.class,
+                () -> slurmJobProvider.filterJobs(jobFilter));
         Assertions.assertNotNull(thrown.getMessage());
     }
 

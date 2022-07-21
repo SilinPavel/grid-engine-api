@@ -229,9 +229,9 @@ public class GridEngineCommandCompilerImplTest {
 
     private static final String LOG_DIR = "logDir";
     private static final String SOME_PATH_TEMPLATE = "/home/%d.err";
-    private static final String SOME_LOG_DIR = "/my/log/dir/";
-    private static final String ERR_LOG_PATH = SOME_LOG_DIR + "$JOB_ID.err";
-    private static final String OUT_LOG_PATH = SOME_LOG_DIR + "$JOB_ID.out";
+    private static final String SOME_LOG_DIR = "/my/log/dir";
+    private static final String ERR_LOG_PATH = SOME_LOG_DIR + "/$JOB_ID.err";
+    private static final String OUT_LOG_PATH = SOME_LOG_DIR + "/$JOB_ID.out";
 
     private static final String PATH = "path";
     private static final String N_KEY = "-n";
