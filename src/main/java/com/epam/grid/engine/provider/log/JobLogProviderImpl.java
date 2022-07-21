@@ -65,7 +65,7 @@ public class JobLogProviderImpl implements JobLogProvider {
      * @return The object of {@link JobLogInfo}
      */
     @Override
-    public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType,
+    public JobLogInfo getJobLogInfo(final long jobId, final JobLogInfo.Type logType,
                                     final int lines, final boolean fromHead) {
         if (lines < 0) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST,
@@ -119,7 +119,7 @@ public class JobLogProviderImpl implements JobLogProvider {
         }
     }
 
-    private String getLogFilePath(final int jobId, final JobLogInfo.Type logType) {
+    private String getLogFilePath(final long jobId, final JobLogInfo.Type logType) {
         return Paths.get(logDir, jobId + DOT + logType.getSuffix()).toString();
     }
 

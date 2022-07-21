@@ -38,7 +38,7 @@ public interface JobLogProvider extends CommandTypeAware {
      * @param fromHead if it's true, lines are taken from the head of the log file, otherwise from the tail.
      * @return The object of {@link JobLogInfo}
      */
-    JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType, final int lines, final boolean fromHead);
+    JobLogInfo getJobLogInfo(final long jobId, final JobLogInfo.Type logType, final int lines, final boolean fromHead);
 
     /**
      * Gets a job log file.

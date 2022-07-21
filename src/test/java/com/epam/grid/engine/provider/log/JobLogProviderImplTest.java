@@ -29,7 +29,7 @@ public class JobLogProviderImplTest {
     private static final String GET_LOG_LINES_COMMAND = "get_log_lines";
     private static final String GET_LOGFILE_INFO_COMMAND = "get_logfile_info";
 
-    private static final int SOME_JOB_ID = 10;
+    private static final long SOME_JOB_ID = 10;
     private static final int SOME_LINES = 10;
     private static final int SOME_BYTES = 150;
     private static final JobLogInfo.Type SOME_LOG_TYPE = JobLogInfo.Type.ERR;
