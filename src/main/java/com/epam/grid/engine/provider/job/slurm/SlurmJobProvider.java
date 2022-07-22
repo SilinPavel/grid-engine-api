@@ -33,6 +33,7 @@ import com.epam.grid.engine.entity.job.JobState;
 import com.epam.grid.engine.entity.job.DeletedJobInfo;
 import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
+import com.epam.grid.engine.entity.job.ParallelExecutionOptions;
 import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.mapper.job.slurm.SlurmJobMapper;
 import com.epam.grid.engine.provider.job.JobProvider;
@@ -121,7 +122,8 @@ public class SlurmJobProvider implements JobProvider {
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
                             @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
-                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:slurm_load_jobs error: Invalid job id specified}") final String jobIdNotFoundMessage,
+                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:slurm_load_jobs error: Invalid job id specified}")
+                            final String jobIdNotFoundMessage,
                             @Value("${job.log.dir}") final String logDir,
                             @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.jobMapper = jobMapper;
@@ -250,11 +252,7 @@ public class SlurmJobProvider implements JobProvider {
             throw new UnsupportedOperationException("Unsupported option was specified, for SLURM engine please "
                     + "use ParallelExecutionOptions");
         }
-        if (options.getParallelExecutionOptions() != null &&
-                (isNotPositive(options.getParallelExecutionOptions().getNumTasks())
-                        || isNotPositive(options.getParallelExecutionOptions().getNodes())
-                        || isNotPositive(options.getParallelExecutionOptions().getCpusPerTask())
-                        || isNotPositive(options.getParallelExecutionOptions().getNumTasksPerNode()))) {
+        if (checkParallelExecutionOptions(options.getParallelExecutionOptions())) {
             throw new UnsupportedOperationException("All Parallel execution options except Exclusive should be "
                     + "greater than 0!");
         }
@@ -341,6 +339,14 @@ public class SlurmJobProvider implements JobProvider {
                 .findFirst()
                 .orElseThrow(() -> new GridEngineException(HttpStatus.NOT_FOUND,
                         String.format("Id specified in %d for job removal not found!", id)));
+    }
+
+    private boolean checkParallelExecutionOptions(final ParallelExecutionOptions parallelExecutionOptions) {
+        return parallelExecutionOptions != null
+                && (isNotPositive(parallelExecutionOptions.getNumTasks())
+                || isNotPositive(parallelExecutionOptions.getNodes())
+                || isNotPositive(parallelExecutionOptions.getCpusPerTask())
+                || isNotPositive(parallelExecutionOptions.getNumTasksPerNode()));
     }
 
     private boolean isNotPositive(final int intToCheck) {
