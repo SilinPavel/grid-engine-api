@@ -244,10 +244,19 @@ public class SlurmJobProvider implements JobProvider {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Command should be specified!");
         }
         if (options.getPriority() != null && (options.getPriority() < 0 || options.getPriority() > MAX_SENT_PRIORITY)) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and 4_294_967_294");
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and "
+                    + MAX_SENT_PRIORITY);
         }
         if (options.getParallelEnvOptions() != null) {
-            throw new UnsupportedOperationException("Parallel environment variables are not supported yet!");
+            throw new UnsupportedOperationException("Unsupported option was specified, for SLURM engine please "
+                    + "use ParallelExecutionOptions");
+        }
+        if (isNotPositive(options.getParallelExecutionOptions().getNumTasks())
+                || isNotPositive(options.getParallelExecutionOptions().getNodes())
+                || isNotPositive(options.getParallelExecutionOptions().getCpusPerTask())
+                || isNotPositive(options.getParallelExecutionOptions().getNumTasksPerNode())) {
+            throw new UnsupportedOperationException("All Parallel execution options except Exclusive should be "
+                    + "greater than 0!");
         }
     }
 
@@ -332,5 +341,9 @@ public class SlurmJobProvider implements JobProvider {
                 .findFirst()
                 .orElseThrow(() -> new GridEngineException(HttpStatus.NOT_FOUND,
                         String.format("Id specified in %d for job removal not found!", id)));
+    }
+
+    private boolean isNotPositive(final int intToCheck) {
+        return intToCheck < 1;
     }
 }

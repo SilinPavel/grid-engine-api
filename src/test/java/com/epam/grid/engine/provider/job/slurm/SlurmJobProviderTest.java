@@ -25,12 +25,13 @@ import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.EngineType;
 import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.Listing;
+import com.epam.grid.engine.entity.job.Job;
+import com.epam.grid.engine.entity.job.JobState;
+import com.epam.grid.engine.entity.job.JobOptions;
+import com.epam.grid.engine.entity.job.ParallelEnvOptions;
+import com.epam.grid.engine.entity.job.ParallelExecutionOptions;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
 import com.epam.grid.engine.entity.job.DeletedJobInfo;
-import com.epam.grid.engine.entity.job.Job;
-import com.epam.grid.engine.entity.job.JobOptions;
-import com.epam.grid.engine.entity.job.JobState;
-import com.epam.grid.engine.entity.job.ParallelEnvOptions;
 import com.epam.grid.engine.exception.GridEngineException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,10 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.containsString;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -157,6 +162,9 @@ public class SlurmJobProviderTest {
                     TERMINATING_JOB_PREFIX + SOME_CORRECT_JOB_ID_STRING,
                     String.format(ERROR_DELETING_STRING_TEMPLATE, SOME_CORRECT_JOB_ID_STRING),
                     TERMINATING_JOB_PREFIX + SECOND_CORRECT_JOB_ID);
+
+    private static final String slurmJobWithParallelEnvOpts = "ParallelExecutionOptions(numTasks=4, nodes=2, "
+            + "cpusPerTask=4, numTasksPerNode=2, exclusive=true)";
 
     @Autowired
     private SlurmJobProvider slurmJobProvider;
@@ -398,7 +406,6 @@ public class SlurmJobProviderTest {
     }
 
 
-
     @ParameterizedTest
     @MethodSource("provideInvalidJobOptions")
     public void shouldThrowWhenPassedIllegalJobOptionsToJobSubmitting(final JobOptions jobOptions) {
@@ -442,11 +449,11 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideCorrectSbatchCommands() {
         return Stream.of(
-                    new String[]{SBATCH_COMMAND, "--export=", ENV_VAR_COMMAND_ARG, JOB_NAME1},
-                    new String[]{SBATCH_COMMAND, "--priority=", JOB_PRIORITY4, JOB_NAME1},
-                    new String[]{SBATCH_COMMAND, "-J", JOB_NAME3, JOB_NAME1},
-                    new String[]{SBATCH_COMMAND, "--partition=", JOB_PARTITION, JOB_NAME1},
-                    new String[]{SBATCH_COMMAND, "-D", JOB_WORK_DIR, JOB_NAME1})
+                        new String[]{SBATCH_COMMAND, "--export=", ENV_VAR_COMMAND_ARG, JOB_NAME1},
+                        new String[]{SBATCH_COMMAND, "--priority=", JOB_PRIORITY4, JOB_NAME1},
+                        new String[]{SBATCH_COMMAND, "-J", JOB_NAME3, JOB_NAME1},
+                        new String[]{SBATCH_COMMAND, "--partition=", JOB_PARTITION, JOB_NAME1},
+                        new String[]{SBATCH_COMMAND, "-D", JOB_WORK_DIR, JOB_NAME1})
                 .map((t) -> (Object) t)
                 .map(Arguments::of);
     }
@@ -465,6 +472,44 @@ public class SlurmJobProviderTest {
         final Job result = slurmJobProvider.runJob(jobOptions);
 
         Assertions.assertEquals(expectedFilteredJob, result);
+    }
+
+    @Test
+    public void shouldReturnCorrectSetParallelExecutionOptions() {
+        final JobOptions testJobOptions = JobOptions.builder()
+            .parallelExecutionOptions(ParallelExecutionOptions.builder()
+                .numTasks(4)
+                .nodes(2)
+                .cpusPerTask(4)
+                .numTasksPerNode(2)
+                .exclusive(true)
+                .build())
+            .command(JOB_NAME1)
+            .build();
+
+        final CommandResult commandResult = new CommandResult(List.of(SOME_JOB_IS_SUBMITTED), 0, EMPTY_LIST);
+        doReturn(commandResult).when(mockCmdExecutor).execute(Mockito.any());
+
+        Assertions.assertEquals(slurmJobProvider.runJob(testJobOptions), correctBuild());
+
+        final ArgumentCaptor<IContext> contextCaptor = ArgumentCaptor.forClass(IContext.class);
+        Mockito.verify(mockCommandCompiler).compileCommand(Mockito.any(), Mockito.any(), contextCaptor.capture());
+
+        assertThat(contextCaptor.getValue().getVariable("options").toString(),
+                containsString(slurmJobWithParallelEnvOpts));
+    }
+
+    @Test
+    public void shouldThrowUnsupportedExceptionWhenParallelExecutionOptionsAreNegative() {
+        final JobOptions jobOptions = JobOptions.builder().command(JOB_NAME1)
+                .parallelExecutionOptions(ParallelExecutionOptions.builder()
+                        .numTasks(-4)
+                        .nodes(-2)
+                        .cpusPerTask(-4)
+                        .numTasksPerNode(-2)
+                        .build())
+                .build();
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> slurmJobProvider.runJob(jobOptions));
     }
 
     @ParameterizedTest
@@ -499,11 +544,11 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideValidNameCasesForRequestsToDeleteJob() {
         return Stream.of(
-                Arguments.of(SLURM_USER, null,
-                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
-                Arguments.of(SOME_USER_NAME, SOME_USER_NAME,
-                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, OWNER_FILTRATION_KEY,
-                                  SOME_USER_NAME, SOME_CORRECT_JOB_ID_STRING})
+            Arguments.of(SLURM_USER, null,
+                new String[]{SCANCEL_COMMAND, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
+            Arguments.of(SOME_USER_NAME, SOME_USER_NAME,
+                new String[]{SCANCEL_COMMAND, VERBOSE_KEY, OWNER_FILTRATION_KEY, SOME_USER_NAME,
+                    SOME_CORRECT_JOB_ID_STRING})
         );
     }
 
