@@ -121,8 +121,7 @@ public class SlurmJobProvider implements JobProvider {
                             final SimpleCmdExecutor simpleCmdExecutor,
                             final GridEngineCommandCompiler commandCompiler,
                             @Value("${slurm.job.output-fields-count:52}") final int fieldsCount,
-                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:slurm_load_jobs error: Invalid job id specified}")
-                            final String jobIdNotFoundMessage,
+                            @Value("${SLURM_JOB_NOT_FOUND_MESSAGE:slurm_load_jobs error: Invalid job id specified}") final String jobIdNotFoundMessage,
                             @Value("${job.log.dir}") final String logDir,
                             @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
         this.jobMapper = jobMapper;
@@ -251,10 +250,11 @@ public class SlurmJobProvider implements JobProvider {
             throw new UnsupportedOperationException("Unsupported option was specified, for SLURM engine please "
                     + "use ParallelExecutionOptions");
         }
-        if (isNotPositive(options.getParallelExecutionOptions().getNumTasks())
-                || isNotPositive(options.getParallelExecutionOptions().getNodes())
-                || isNotPositive(options.getParallelExecutionOptions().getCpusPerTask())
-                || isNotPositive(options.getParallelExecutionOptions().getNumTasksPerNode())) {
+        if (options.getParallelExecutionOptions() != null &&
+                (isNotPositive(options.getParallelExecutionOptions().getNumTasks())
+                        || isNotPositive(options.getParallelExecutionOptions().getNodes())
+                        || isNotPositive(options.getParallelExecutionOptions().getCpusPerTask())
+                        || isNotPositive(options.getParallelExecutionOptions().getNumTasksPerNode()))) {
             throw new UnsupportedOperationException("All Parallel execution options except Exclusive should be "
                     + "greater than 0!");
         }
