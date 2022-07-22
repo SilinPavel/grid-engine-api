@@ -47,6 +47,6 @@ public interface JobLogProvider extends CommandTypeAware {
      * @param logType The type of required log file.
      * @return The job log file like a stream.
      */
-    InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType);
+    InputStream getJobLogFile(final long jobId, final JobLogInfo.Type logType);
 
 }

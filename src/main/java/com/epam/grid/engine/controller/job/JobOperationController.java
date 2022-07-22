@@ -112,7 +112,7 @@ public class JobOperationController extends AbstractRestController {
             @ApiResponse(code = 404, message = NOT_FOUND),
             @ApiResponse(code = 500, message = INTERNAL_ERROR)
     })
-    public DeletedJobInfo deleteJob(@RequestBody final DeleteJobFilter deleteJobFilter) {
+    public Listing<DeletedJobInfo> deleteJob(@RequestBody final DeleteJobFilter deleteJobFilter) {
         return providerService.deleteJob(deleteJobFilter);
     }
 

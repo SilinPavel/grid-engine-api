@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -84,7 +84,7 @@ public class SlurmJobProviderTest {
     private static final String JOB_PRIORITY1 = "0.99998474121093";
     private static final String JOB_PRIORITY2 = "0.99998474074527";
     private static final String JOB_PRIORITY3 = "0.00000000000000";
-    private static final long SOME_WRONG_SENT_PRIORITY = -10L;
+    private static final long SOME_WRONG_SENT_PRIORITY = -1L;
     private static final long SECOND_WRONG_SENT_PRIORITY = 4_294_967_295L;
 
     private static final long SOME_CORRECT_JOB_ID = 5L;
@@ -97,9 +97,10 @@ public class SlurmJobProviderTest {
     private static final String SOME_BINARY_COMMAND = "echo";
     private static final String SOME_ARGUMENT = "someArgument";
     private static final String SOME_ARGUMENT_WITH_SPACES = "some argument with spaces";
-    private static final String SOME_JOB_IS_SUBMITTED = "Submitted batch job " + SOME_CORRECT_JOB_ID_STRING;
+    private static final String JOB_IS_SUBMITTED_STDOUT_PREFIX = "Submitted batch job ";
+    private static final String SOME_JOB_IS_SUBMITTED = JOB_IS_SUBMITTED_STDOUT_PREFIX + SOME_CORRECT_JOB_ID_STRING;
 
-    private static final List<String> EMPTY_LIST = Collections.EMPTY_LIST;
+    private static final List<String> EMPTY_LIST = List.of();
     private static final String SQUEUE_COMMAND_EXECUTION_HEADER = "ACCOUNT|TRES_PER_NODE|MIN_CPUS|MIN_TMP_DISK|"
             + "END_TIME|FEATURES|GROUP|OVER_SUBSCRIBE|JOBID|NAME|COMMENT|TIME_LIMIT|MIN_MEMORY|REQ_NODES|"
             + "COMMAND|PRIORITY|QOS|REASON||ST|USER|RESERVATION|WCKEY|EXC_NODES|NICE|S:C:T|JOBID|EXEC_HOST|"
@@ -113,24 +114,23 @@ public class SlurmJobProviderTest {
             + "|worker1|2022-05-13T10:29:10|%s|0|%s|(null)|N/A|(null)|/";
 
     private static final String RUNNING_JOB_SUBMIT_TIME = "2022-05-13T10:29:09";
-    private static final String RUNNING_JOB_STDOUT = String.format(JOB_STDOUT_STRING_FORMAT_TEMPLATE,
+    private static final String RUNNING_JOB_STRING = String.format(JOB_STDOUT_STRING_FORMAT_TEMPLATE,
             SOME_CORRECT_JOB_ID, JOB_NAME1, JOB_PRIORITY1, RUNNING_STATUS_CODE, SLURM_USER,
             TEST_QUEUE, RUNNING_STRING, RUNNING_JOB_SUBMIT_TIME);
 
     private static final String PENDING_JOB_SUBMIT_TIME = "2022-05-15T08:03:42";
-    private static final String PENDING_JOB_STDOUT = String.format(JOB_STDOUT_STRING_FORMAT_TEMPLATE,
+    private static final String PENDING_JOB_STRING = String.format(JOB_STDOUT_STRING_FORMAT_TEMPLATE,
             SECOND_CORRECT_JOB_ID, JOB_NAME2, JOB_PRIORITY2, PENDING_STATUS_CODE, SOME_USER_NAME,
             TEST_QUEUE, PENDING_STRING, PENDING_JOB_SUBMIT_TIME);
 
     private static final String SUSPENDED_JOB_SUBMIT_TIME = "2022-05-15T08:03:38";
-    private static final String SUSPENDED_JOB_STDOUT = String.format(JOB_STDOUT_STRING_FORMAT_TEMPLATE,
+    private static final String SUSPENDED_JOB_STRING = String.format(JOB_STDOUT_STRING_FORMAT_TEMPLATE,
             THIRD_CORRECT_JOB_ID, JOB_NAME3, JOB_PRIORITY3, SUSPENDED_STATUS_CODE, SLURM_USER,
             TEST_QUEUE, SUSPENDED_STRING, SUSPENDED_JOB_SUBMIT_TIME);
 
-    private static final List<String> VALID_STDOUT = List.of(SQUEUE_COMMAND_EXECUTION_HEADER, RUNNING_JOB_STDOUT);
+    private static final List<String> VALID_STDOUT = List.of(SQUEUE_COMMAND_EXECUTION_HEADER, RUNNING_JOB_STRING);
     private static final List<String> TWO_VALID_JOBS_STDOUT = List.of(SQUEUE_COMMAND_EXECUTION_HEADER,
-            PENDING_JOB_STDOUT,
-            RUNNING_JOB_STDOUT);
+            PENDING_JOB_STRING, RUNNING_JOB_STRING);
 
     private static final List<String> INVALID_OUTPUT = List.of(SQUEUE_COMMAND_EXECUTION_HEADER,
             "(null)|N/A|1|0|2022-05-18T10:29:10|(null)|root|OK|2|test.sh|(null)|5-00:00:00|500M||/data/test.sh");
@@ -175,7 +175,6 @@ public class SlurmJobProviderTest {
                 .build();
 
         mockCommandCompilation(SQUEUE_COMMAND, commandResult, ALL_FORMAT);
-        Assertions.assertEquals(CommandType.SLURM, slurmJobProvider.getProviderType());
         final JobFilter jobFilter = new JobFilter();
         final Throwable thrown = Assertions.assertThrows(GridEngineException.class,
                 () -> slurmJobProvider.filterJobs(jobFilter));
@@ -193,7 +192,6 @@ public class SlurmJobProviderTest {
         final List<Job> result = slurmJobProvider.filterJobs(new JobFilter()).getElements();
 
         Assertions.assertNull(result);
-        Assertions.assertEquals(CommandType.SLURM, slurmJobProvider.getProviderType());
     }
 
     @Test
@@ -281,21 +279,6 @@ public class SlurmJobProviderTest {
         Assertions.assertEquals(runningJob, result.getElements().get(0));
     }
 
-    @Test
-    public void shouldFailWithException() {
-        final JobFilter jobFilter = new JobFilter();
-        final CommandResult commandResult = CommandResult.builder()
-                .stdOut(EMPTY_LIST)
-                .stdErr(EMPTY_LIST)
-                .exitCode(1)
-                .build();
-
-        mockCommandCompilation(SQUEUE_COMMAND, commandResult, ALL_FORMAT);
-        final Throwable thrown = Assertions.assertThrows(GridEngineException.class,
-                () -> slurmJobProvider.filterJobs(jobFilter));
-        Assertions.assertNotNull(thrown.getMessage());
-    }
-
     @ParameterizedTest
     @MethodSource("provideCasesWithFiltrationByState")
     public void shouldReturnCorrectJobWhenFiltrationByState(final String jobState, final String stdOutJobString,
@@ -314,9 +297,9 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideCasesWithFiltrationByState() {
         return Stream.of(
-                Arguments.of(RUNNING_STRING, RUNNING_JOB_STDOUT, runningJobTemplate()),
-                Arguments.of(PENDING_STRING, PENDING_JOB_STDOUT, pendingJobTemplate()),
-                Arguments.of(SUSPENDED_STRING, SUSPENDED_JOB_STDOUT, suspendedJobTemplate())
+                Arguments.of(RUNNING_STRING, RUNNING_JOB_STRING, runningJobTemplate()),
+                Arguments.of(PENDING_STRING, PENDING_JOB_STRING, pendingJobTemplate()),
+                Arguments.of(SUSPENDED_STRING, SUSPENDED_JOB_STRING, suspendedJobTemplate())
         );
     }
 
@@ -397,8 +380,6 @@ public class SlurmJobProviderTest {
         Assertions.assertEquals(binaryContextArgument, contextCaptor.getValue().getVariable(BINARY_COMMAND));
     }
 
-
-
     @ParameterizedTest
     @MethodSource("provideInvalidJobOptions")
     public void shouldThrowWhenPassedIllegalJobOptionsToJobSubmitting(final JobOptions jobOptions) {
@@ -413,6 +394,21 @@ public class SlurmJobProviderTest {
                 Arguments.of(JobOptions.builder().priority(SOME_WRONG_SENT_PRIORITY).command(JOB_NAME1).build()),
                 Arguments.of(JobOptions.builder().priority(SECOND_WRONG_SENT_PRIORITY).command(JOB_NAME1).build())
         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideBadCommandResultForJobSubmitting")
+    public void shouldThrowWhenBadCommandResultDuringJobSubmitting(final CommandResult commandResult) {
+        final JobOptions jobOptions = JobOptions.builder().command(JOB_NAME1).build();
+        mockCommandCompilation(SBATCH_COMMAND, commandResult, SBATCH_COMMAND, JOB_NAME1);
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.runJob(jobOptions));
+    }
+
+    static Stream<Arguments> provideBadCommandResultForJobSubmitting() {
+        return Stream.of(
+                        new CommandResult(EMPTY_LIST, 1, EMPTY_LIST),
+                        new CommandResult(List.of(JOB_IS_SUBMITTED_STDOUT_PREFIX), 0, EMPTY_LIST))
+                .map(Arguments::of);
     }
 
     @Test
@@ -467,95 +463,6 @@ public class SlurmJobProviderTest {
         Assertions.assertEquals(expectedFilteredJob, result);
     }
 
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(longs = {SOME_WRONG_JOB_ID})
-    public void shouldThrowWhenPassWrongRequestToDeleteJob(final Long jobId) {
-        final DeleteJobFilter deleteJobFilter = new DeleteJobFilter(false, jobId, null);
-        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(deleteJobFilter));
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideValidNameCasesForRequestsToDeleteJob")
-    public void shouldReturnCorrectUserNameAndJobIdWhenDeleteJob(final String expectedUserName,
-                                                                 final String passedUserName,
-                                                                 final String... commandArgs) {
-        final CommandResult squeueCommandResult = CommandResult.builder()
-                .stdOut(VALID_STDOUT)
-                .stdErr(EMPTY_LIST)
-                .build();
-        mockCommandCompilation(SQUEUE_COMMAND, squeueCommandResult, ALL_FORMAT,
-                JOB_LIST_KEY, SOME_CORRECT_JOB_ID_STRING);
-
-        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0,
-                Collections.singletonList(TERMINATING_JOB_PREFIX + SOME_CORRECT_JOB_ID_STRING));
-        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, commandArgs);
-
-        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, SOME_CORRECT_JOB_ID, passedUserName);
-        final DeletedJobInfo deletedJobInfoResult = slurmJobProvider.deleteJob(testDeleteJobFilter);
-        Assertions.assertEquals(expectedUserName, deletedJobInfoResult.getUser());
-        Assertions.assertEquals(Collections.singletonList(SOME_CORRECT_JOB_ID), deletedJobInfoResult.getIds());
-    }
-
-    static Stream<Arguments> provideValidNameCasesForRequestsToDeleteJob() {
-        return Stream.of(
-                Arguments.of(SLURM_USER, null,
-                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
-                Arguments.of(SOME_USER_NAME, SOME_USER_NAME,
-                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, OWNER_FILTRATION_KEY,
-                                  SOME_USER_NAME, SOME_CORRECT_JOB_ID_STRING})
-        );
-    }
-
-    @Test
-    public void shouldReturnCorrectListDeletedJobs() {
-        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0, DELETE_ALL_USER_JOBS_STDOUT);
-        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, SCANCEL_COMMAND, VERBOSE_KEY,
-                OWNER_FILTRATION_KEY, SOME_USER_NAME);
-
-        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
-        final DeletedJobInfo deletedJobInfoResult = slurmJobProvider.deleteJob(testDeleteJobFilter);
-        Assertions.assertEquals(SOME_USER_NAME, deletedJobInfoResult.getUser());
-        Assertions.assertEquals(List.of(SECOND_CORRECT_JOB_ID), deletedJobInfoResult.getIds());
-    }
-
-    @Test
-    public void shouldThrowWhenUserIsNotPassedAndDeletingJobNotFound() {
-        final CommandResult squeueCommandResult = CommandResult.builder()
-                .stdOut(EMPTY_LIST)
-                .exitCode(1)
-                .stdErr(Collections.singletonList(SQUEUE_JOB_LOADING_ERROR_STRING))
-                .build();
-        mockCommandCompilation(SQUEUE_COMMAND, squeueCommandResult, ALL_FORMAT,
-                JOB_LIST_KEY, SOME_CORRECT_JOB_ID_STRING);
-        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, SOME_CORRECT_JOB_ID, null);
-        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(testDeleteJobFilter));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {0, 1})
-    public void shouldThrowWhenDeletingJobsWentWrong(final int exitCode) {
-        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, exitCode, EMPTY_LIST);
-        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult,
-                VERBOSE_KEY, OWNER_FILTRATION_KEY, SOME_USER_NAME);
-
-        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
-        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(testDeleteJobFilter));
-    }
-
-    @Test
-    public void shouldThrowWhenAllJobsDeletionCompletedWithErrors() {
-        final List<String> allJobsErrorStdOut = new ArrayList<>(DELETE_ALL_USER_JOBS_STDOUT);
-        allJobsErrorStdOut.add(String.format(ERROR_DELETING_STRING_TEMPLATE, SECOND_CORRECT_JOB_ID));
-
-        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0, allJobsErrorStdOut);
-        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, SCANCEL_COMMAND, VERBOSE_KEY,
-                OWNER_FILTRATION_KEY, SOME_USER_NAME);
-
-        final DeleteJobFilter deleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
-        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(deleteJobFilter));
-    }
-
     private static Job correctBuild() {
         return Job.builder()
                 .id(runningJobTemplate().getId())
@@ -563,5 +470,118 @@ public class SlurmJobProviderTest {
                         .category(JobState.Category.PENDING)
                         .build())
                 .build();
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideWrongDeleteRequests")
+    public void shouldThrowWhenPassWrongRequestToDeleteJob(final DeleteJobFilter deleteJobFilter) {
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(deleteJobFilter));
+    }
+
+    static Stream<Arguments> provideWrongDeleteRequests() {
+        return Stream.of(
+                        new DeleteJobFilter(false, List.of(SOME_WRONG_JOB_ID), SOME_USER_NAME),
+                        new DeleteJobFilter(true, null, EMPTY_STRING),
+                        new DeleteJobFilter(false, null, null))
+                .map(Arguments::of);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideCasesForNotFoundAnyJobsToDeleting")
+    public void shouldThrowWhenNotFoundAnyJobsForDeleting(final String user, final List<Long> ids) {
+        final DeleteJobFilter jobFilter = DeleteJobFilter.builder()
+                .ids(ids)
+                .user(user)
+                .build();
+        final CommandResult squeueCommandResult = new CommandResult(List.of(SQUEUE_COMMAND_EXECUTION_HEADER), 0,
+                EMPTY_LIST);
+        mockCommandCompilation(SQUEUE_COMMAND, squeueCommandResult, ALL_FORMAT,
+                JOB_LIST_KEY, SOME_CORRECT_JOB_ID_STRING);
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(jobFilter));
+    }
+
+    static Stream<Arguments> provideCasesForNotFoundAnyJobsToDeleting() {
+        return Stream.of(
+                    Arguments.of(EMPTY_STRING, List.of(SOME_CORRECT_JOB_ID)),
+                    Arguments.of(SOME_USER_NAME, List.of()),
+                    Arguments.of(SOME_USER_NAME, List.of(SOME_CORRECT_JOB_ID))
+                );
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {SLURM_USER})
+    public void shouldReturnCorrectUserNameAndJobIdDuringJobDeleting(final String userName) {
+        final CommandResult squeueCommandResult = new CommandResult(VALID_STDOUT, 0, EMPTY_LIST);
+        mockCommandCompilation(SQUEUE_COMMAND, squeueCommandResult, ALL_FORMAT,
+                JOB_LIST_KEY, SOME_CORRECT_JOB_ID_STRING);
+
+        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0,
+                Collections.singletonList(TERMINATING_JOB_PREFIX + SOME_CORRECT_JOB_ID_STRING));
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, SCANCEL_COMMAND, VERBOSE_KEY);
+
+        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, List.of(SOME_CORRECT_JOB_ID),
+                userName);
+        final Listing<DeletedJobInfo> result = slurmJobProvider.deleteJob(testDeleteJobFilter);
+        Assertions.assertEquals(1, result.getElements().size());
+        Assertions.assertEquals(new DeletedJobInfo(SOME_CORRECT_JOB_ID, SLURM_USER), result.getElements().get(0));
+    }
+
+    @Test
+    public void shouldReturnCorrectListDeletedJobs() {
+        final CommandResult squeueCommandResult = CommandResult.builder()
+                .stdOut(List.of(SQUEUE_COMMAND_EXECUTION_HEADER, PENDING_JOB_STRING))
+                .stdErr(EMPTY_LIST).build();
+        mockCommandCompilation(SQUEUE_COMMAND, squeueCommandResult, ALL_FORMAT, OWNER_FILTRATION_KEY, SOME_USER_NAME);
+
+        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0, DELETE_ALL_USER_JOBS_STDOUT);
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult, SCANCEL_COMMAND, VERBOSE_KEY,
+                OWNER_FILTRATION_KEY, SOME_USER_NAME);
+
+        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
+        final Listing<DeletedJobInfo> result = slurmJobProvider.deleteJob(testDeleteJobFilter);
+        Assertions.assertEquals(1, result.getElements().size());
+        Assertions.assertEquals(new DeletedJobInfo(SECOND_CORRECT_JOB_ID, SOME_USER_NAME), result.getElements().get(0));
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideWrongCommandResultsForJobDeleting")
+    public void shouldThrowWhenDeletingJobsWentWrong(final CommandResult squeueCommandResult,
+                                                     final int scancelExitCode) {
+        mockCommandCompilation(SQUEUE_COMMAND, squeueCommandResult, ALL_FORMAT,
+                OWNER_FILTRATION_KEY, SOME_USER_NAME);
+
+        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, scancelExitCode, EMPTY_LIST);
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult,
+                VERBOSE_KEY, OWNER_FILTRATION_KEY, SOME_USER_NAME);
+
+        final DeleteJobFilter testDeleteJobFilter = new DeleteJobFilter(false, null, SOME_USER_NAME);
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(testDeleteJobFilter));
+    }
+
+    static Stream<Arguments> provideWrongCommandResultsForJobDeleting() {
+        return Stream.of(
+                Arguments.of(new CommandResult(EMPTY_LIST, 1, List.of(SQUEUE_JOB_LOADING_ERROR_STRING)), 0),
+                Arguments.of(new CommandResult(VALID_STDOUT, 0, EMPTY_LIST), 0),
+                Arguments.of(new CommandResult(VALID_STDOUT, 0, EMPTY_LIST), 1)
+        );
+    }
+
+    @Test
+    public void shouldThrowWhenAllJobsDeletionCompletedWithErrors() {
+        final CommandResult squeueCommandResult = CommandResult.builder()
+                .stdOut(List.of(SQUEUE_COMMAND_EXECUTION_HEADER, SUSPENDED_JOB_STRING))
+                .stdErr(EMPTY_LIST).build();
+        mockCommandCompilation(SQUEUE_COMMAND, squeueCommandResult);
+
+        final List<String> allJobsErrorStdOut = new ArrayList<>(DELETE_ALL_USER_JOBS_STDOUT);
+        allJobsErrorStdOut.add(String.format(ERROR_DELETING_STRING_TEMPLATE, THIRD_CORRECT_JOB_ID));
+
+        final CommandResult scancelCommandResult = new CommandResult(EMPTY_LIST, 0, allJobsErrorStdOut);
+        mockCommandCompilation(SCANCEL_COMMAND, scancelCommandResult);
+
+        final DeleteJobFilter deleteJobFilter = new DeleteJobFilter(false, List.of(THIRD_CORRECT_JOB_ID),
+                SOME_USER_NAME);
+        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(deleteJobFilter));
     }
 }

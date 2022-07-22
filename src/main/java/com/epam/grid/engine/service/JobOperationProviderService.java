@@ -86,12 +86,12 @@ public class JobOperationProviderService {
     }
 
     /**
-     * Deletes the job and returns information about this job.
+     * Deletes jobs and returns information about these jobs.
      *
      * @param deleteJobFilter An object with the task deletion parameters.
      * @return Information about deleted job.
      */
-    public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
+    public Listing<DeletedJobInfo> deleteJob(final DeleteJobFilter deleteJobFilter) {
         return jobProvider.deleteJob(deleteJobFilter);
     }
 
@@ -123,7 +123,7 @@ public class JobOperationProviderService {
      * @param fromHead if it's true, lines are taken from the head of the log file, otherwise from the tail.
      * @return {@link JobLogInfo}
      */
-    public JobLogInfo getJobLogInfo(final int jobId, final JobLogInfo.Type logType,
+    public JobLogInfo getJobLogInfo(final long jobId, final JobLogInfo.Type logType,
                                     final int lines, final boolean fromHead) {
         return jobLogProvider.getJobLogInfo(jobId, logType, lines, fromHead);
     }
@@ -136,7 +136,7 @@ public class JobOperationProviderService {
      * @param logType The type of required log file.
      * @return The job log file like a stream.
      */
-    public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
+    public InputStream getJobLogFile(final long jobId, final JobLogInfo.Type logType) {
         return jobLogProvider.getJobLogFile(jobId, logType);
     }
 

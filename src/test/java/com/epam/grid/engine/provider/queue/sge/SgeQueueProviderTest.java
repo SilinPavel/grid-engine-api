@@ -21,7 +21,6 @@ package com.epam.grid.engine.provider.queue.sge;
 
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
-import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.QueueFilter;
 import com.epam.grid.engine.entity.queue.Queue;
 import com.epam.grid.engine.entity.queue.QueueVO;
@@ -177,8 +176,6 @@ public class SgeQueueProviderTest {
         for (Queue queue : queues) {
             result.add(queue.getName());
         }
-
-        Assertions.assertEquals(CommandType.SGE, sgeQueueProvider.getProviderType());
         Assertions.assertEquals(expected, result);
     }
 
@@ -263,7 +260,6 @@ public class SgeQueueProviderTest {
                 .execute(Mockito.matches(COMMAND_QCONF), Mockito.matches(OPTION_AQ), Mockito.anyString());
         final Queue resultQueue = sgeQueueProvider.registerQueue(registrationRequest);
 
-        Assertions.assertEquals(CommandType.SGE, sgeQueueProvider.getProviderType());
         Assertions.assertEquals(expectedQueue.getName(), resultQueue.getName());
         Assertions.assertEquals(expectedQueue.getHostList(), resultQueue.getHostList());
         Assertions.assertEquals(expectedQueue.getParallelEnvironmentNames(), resultQueue.getParallelEnvironmentNames());
@@ -339,7 +335,6 @@ public class SgeQueueProviderTest {
                 .execute(Mockito.matches(COMMAND_QCONF), Mockito.matches(OPTION_MQ), Mockito.anyString());
         final Queue resultQueue = sgeQueueProvider.updateQueue(updateRequest);
 
-        Assertions.assertEquals(CommandType.SGE, sgeQueueProvider.getProviderType());
         Assertions.assertEquals(expectedQueue.getName(), resultQueue.getName());
         Assertions.assertEquals(expectedQueue.getHostList(), resultQueue.getHostList());
         Assertions.assertEquals(expectedQueue.getParallelEnvironmentNames(), resultQueue.getParallelEnvironmentNames());

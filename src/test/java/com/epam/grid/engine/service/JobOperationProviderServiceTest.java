@@ -36,7 +36,6 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,6 +51,7 @@ public class JobOperationProviderServiceTest {
     private static final String DATE = "1986-04-08T12:30:00";
     private static final String STATE = "running";
     private static final String STATE_CODE = "r";
+    private static final long SOME_JOB_ID = 5L;
 
     @Autowired
     JobOperationProviderService jobOperationProviderService;
@@ -63,13 +63,11 @@ public class JobOperationProviderServiceTest {
     public void shouldReturnCorrectInfoDuringDeletion() {
         final DeleteJobFilter deleteJobFilter = DeleteJobFilter.builder()
                 .force(false)
-                .id(1L)
+                .ids(List.of(SOME_JOB_ID))
                 .user(SGEUSER)
                 .build();
-        final DeletedJobInfo expectedDeletedJobInfo = DeletedJobInfo.builder()
-                .ids(List.of(1L))
-                .user(SGEUSER)
-                .build();
+        final Listing<DeletedJobInfo> expectedDeletedJobInfo =
+                new Listing<>(List.of(new DeletedJobInfo(SOME_JOB_ID, SGEUSER)));
         doReturn(expectedDeletedJobInfo).when(jobProvider).deleteJob(deleteJobFilter);
         Assertions.assertEquals(expectedDeletedJobInfo, jobOperationProviderService.deleteJob(deleteJobFilter));
         Mockito.verify(jobProvider, times(1)).deleteJob(deleteJobFilter);
@@ -79,7 +77,7 @@ public class JobOperationProviderServiceTest {
     public void shouldReturnCorrectResponse() {
         final Listing<Job> jobListing = listingParser(listParser());
         final JobFilter jobFilter = new JobFilter();
-        jobFilter.setIds(Collections.singletonList(7L));
+        jobFilter.setIds(List.of(SOME_JOB_ID));
 
         doReturn(jobListing).when(jobProvider).filterJobs(jobFilter);
         Assertions.assertEquals(jobListing, jobOperationProviderService.filter(jobFilter));
@@ -97,8 +95,8 @@ public class JobOperationProviderServiceTest {
     }
 
     private static List<Job> listParser() {
-        return Collections.singletonList(Job.builder()
-                .id(7)
+        return List.of(Job.builder()
+                .id(SOME_JOB_ID)
                 .priority(0.55500)
                 .name(STDIN)
                 .owner(SGEUSER)

@@ -111,7 +111,7 @@ public class JobLogProviderImpl implements JobLogProvider {
      * @return The job log file like a byte array.
      */
     @Override
-    public InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType) {
+    public InputStream getJobLogFile(final long jobId, final JobLogInfo.Type logType) {
         try {
             return new BufferedInputStream(new FileInputStream(getLogFilePath(jobId, logType)));
         } catch (final IOException e) {
