@@ -448,11 +448,11 @@ public class SlurmJobProviderTest {
 
     static Stream<Arguments> provideCorrectSbatchCommands() {
         return Stream.of(
-                        new String[]{SBATCH_COMMAND, "--export=", ENV_VAR_COMMAND_ARG, JOB_NAME1},
-                        new String[]{SBATCH_COMMAND, "--priority=", JOB_PRIORITY4, JOB_NAME1},
-                        new String[]{SBATCH_COMMAND, "-J", JOB_NAME3, JOB_NAME1},
-                        new String[]{SBATCH_COMMAND, "--partition=", JOB_PARTITION, JOB_NAME1},
-                        new String[]{SBATCH_COMMAND, "-D", JOB_WORK_DIR, JOB_NAME1})
+                    new String[]{SBATCH_COMMAND, "--export=", ENV_VAR_COMMAND_ARG, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "--priority=", JOB_PRIORITY4, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "-J", JOB_NAME3, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "--partition=", JOB_PARTITION, JOB_NAME1},
+                    new String[]{SBATCH_COMMAND, "-D", JOB_WORK_DIR, JOB_NAME1})
                 .map((t) -> (Object) t)
                 .map(Arguments::of);
     }
@@ -544,10 +544,10 @@ public class SlurmJobProviderTest {
     static Stream<Arguments> provideValidNameCasesForRequestsToDeleteJob() {
         return Stream.of(
                 Arguments.of(SLURM_USER, null,
-                        new String[]{SCANCEL_COMMAND, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
+                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, SOME_CORRECT_JOB_ID_STRING}),
                 Arguments.of(SOME_USER_NAME, SOME_USER_NAME,
-                        new String[]{SCANCEL_COMMAND, VERBOSE_KEY, OWNER_FILTRATION_KEY,
-                                     SOME_USER_NAME, SOME_CORRECT_JOB_ID_STRING})
+                    new String[] {SCANCEL_COMMAND, VERBOSE_KEY, OWNER_FILTRATION_KEY,
+                                  SOME_USER_NAME, SOME_CORRECT_JOB_ID_STRING})
         );
     }
 
