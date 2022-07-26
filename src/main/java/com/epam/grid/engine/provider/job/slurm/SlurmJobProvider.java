@@ -135,7 +135,7 @@ public class SlurmJobProvider implements JobProvider {
     public Job runJob(final JobOptions options) {
         validateJobOptions(options);
         final CommandResult result = simpleCmdExecutor.execute(makeSbatchCommand(options));
-        if (result.getExitCode() != 0) {
+        if (result.getExitCode() != 0 || result.getStdOut().isEmpty()) {
             CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
         final Matcher matcher = SUBMITTED_JOB_PATTERN.matcher(result.getStdOut().get(0));

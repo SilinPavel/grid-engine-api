@@ -74,7 +74,7 @@ public class SgeJobProviderTest {
     private static final int SOME_PE_MAX_VALUE = 100;
     private static final int WRONG_PE_MIN_VALUE = -1;
     private static final int WRONG_PE_MAX_VALUE = 10_000_000;
-
+    private static final String SOME_JOB_SUBMIT_ERROR_STDOUT = "Unable to run job: job rejected";
     private static final String JOB_SUBMITTED_FORMAT_TEMPLATE = "Your job %d (\"%s\") has been submitted";
     private static final String JOB_SUBMITTED_STDOUT = String.format(JOB_SUBMITTED_FORMAT_TEMPLATE,
             SOME_JOB_ID_2, JOB_COMMAND);
@@ -251,7 +251,8 @@ public class SgeJobProviderTest {
     static Stream<Arguments> provideBadCommandResultForJobSubmitting() {
         return Stream.of(
                         new CommandResult(EMPTY_LIST, 1, EMPTY_LIST),
-                        new CommandResult(List.of(JOB_SUBMITTED_FORMAT_TEMPLATE), 0, EMPTY_LIST))
+                        new CommandResult(EMPTY_LIST, 0, EMPTY_LIST),
+                        new CommandResult(List.of(SOME_JOB_SUBMIT_ERROR_STDOUT), 0, EMPTY_LIST))
                 .map(Arguments::of);
     }
 

@@ -407,6 +407,7 @@ public class SlurmJobProviderTest {
     static Stream<Arguments> provideBadCommandResultForJobSubmitting() {
         return Stream.of(
                         new CommandResult(EMPTY_LIST, 1, EMPTY_LIST),
+                        new CommandResult(EMPTY_LIST, 0, EMPTY_LIST),
                         new CommandResult(List.of(JOB_IS_SUBMITTED_STDOUT_PREFIX), 0, EMPTY_LIST))
                 .map(Arguments::of);
     }

@@ -164,7 +164,7 @@ public class SgeJobProvider implements JobProvider {
 
     private long toSubmitNewJob(final JobOptions options) {
         final CommandResult result = simpleCmdExecutor.execute(makeQsubCommand(options));
-        if (result.getExitCode() != 0) {
+        if (result.getExitCode() != 0 || result.getStdOut().isEmpty()) {
             CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
         final Matcher matcher = SUBMITTED_JOB_ID_PATTERN.matcher(result.getStdOut().get(0));
