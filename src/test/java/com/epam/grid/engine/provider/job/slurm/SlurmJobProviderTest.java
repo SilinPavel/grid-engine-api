@@ -37,7 +37,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -91,15 +90,15 @@ public class SlurmJobProviderTest {
     private static final long SECOND_CORRECT_JOB_ID = 10L;
     private static final long THIRD_CORRECT_JOB_ID = 15L;
     private static final String SOME_CORRECT_JOB_ID_STRING = Long.toString(SOME_CORRECT_JOB_ID);
-    private static final long SOME_WRONG_JOB_ID = 0L;
 
     private static final String BINARY_COMMAND = "binaryCommand";
     private static final String SOME_BINARY_COMMAND = "echo";
     private static final String SOME_ARGUMENT = "someArgument";
     private static final String SOME_ARGUMENT_WITH_SPACES = "some argument with spaces";
     private static final String SOME_JOB_IS_SUBMITTED = "Submitted batch job " + SOME_CORRECT_JOB_ID_STRING;
+    private static final String SOME_JOB_LOG_DIRECTORY_PATH = "/mnt/logs";
 
-    private static final List<String> EMPTY_LIST = Collections.EMPTY_LIST;
+    private static final List<String> EMPTY_LIST = List.of();
     private static final String SQUEUE_COMMAND_EXECUTION_HEADER = "ACCOUNT|TRES_PER_NODE|MIN_CPUS|MIN_TMP_DISK|"
             + "END_TIME|FEATURES|GROUP|OVER_SUBSCRIBE|JOBID|NAME|COMMENT|TIME_LIMIT|MIN_MEMORY|REQ_NODES|"
             + "COMMAND|PRIORITY|QOS|REASON||ST|USER|RESERVATION|WCKEY|EXC_NODES|NICE|S:C:T|JOBID|EXEC_HOST|"
@@ -386,7 +385,7 @@ public class SlurmJobProviderTest {
         final CommandResult commandResult = new CommandResult(List.of(SOME_JOB_IS_SUBMITTED), 0, EMPTY_LIST);
         doReturn(commandResult).when(mockCmdExecutor).execute(Mockito.any());
 
-        Assertions.assertDoesNotThrow(() -> slurmJobProvider.runJob(testJobOptions));
+        Assertions.assertDoesNotThrow(() -> slurmJobProvider.runJob(testJobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
 
         final ArgumentCaptor<IContext> contextCaptor = ArgumentCaptor.forClass(IContext.class);
         final ArgumentCaptor<String> commandCaptor = ArgumentCaptor.forClass(String.class);
@@ -402,14 +401,12 @@ public class SlurmJobProviderTest {
     @ParameterizedTest
     @MethodSource("provideInvalidJobOptions")
     public void shouldThrowWhenPassedIllegalJobOptionsToJobSubmitting(final JobOptions jobOptions) {
-        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.runJob(jobOptions));
+        Assertions.assertThrows(GridEngineException.class,
+                () -> slurmJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
     }
 
     static Stream<Arguments> provideInvalidJobOptions() {
         return Stream.of(
-                Arguments.of(new JobOptions()),
-                Arguments.of(JobOptions.builder().command(null).build()),
-                Arguments.of(JobOptions.builder().command(EMPTY_STRING).build()),
                 Arguments.of(JobOptions.builder().priority(SOME_WRONG_SENT_PRIORITY).command(JOB_NAME1).build()),
                 Arguments.of(JobOptions.builder().priority(SECOND_WRONG_SENT_PRIORITY).command(JOB_NAME1).build())
         );
@@ -420,7 +417,8 @@ public class SlurmJobProviderTest {
         final JobOptions jobOptions = JobOptions.builder().command(JOB_NAME1)
                 .parallelEnvOptions(new ParallelEnvOptions(EMPTY_STRING, 1, 10))
                 .build();
-        Assertions.assertThrows(UnsupportedOperationException.class, () -> slurmJobProvider.runJob(jobOptions));
+        Assertions.assertThrows(UnsupportedOperationException.class,
+                () -> slurmJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
     }
 
     @ParameterizedTest
@@ -435,7 +433,7 @@ public class SlurmJobProviderTest {
         commandResult.setStdErr(EMPTY_LIST);
 
         mockCommandCompilation(SBATCH_COMMAND, commandResult, command);
-        final Job result = slurmJobProvider.runJob(jobOptions);
+        final Job result = slurmJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH);
 
         Assertions.assertEquals(expectedFilteredJob.getId(), result.getId());
     }
@@ -462,17 +460,9 @@ public class SlurmJobProviderTest {
         commandResult.setStdErr(EMPTY_LIST);
 
         mockCommandCompilation(SBATCH_COMMAND, commandResult, SBATCH_COMMAND, JOB_NAME1);
-        final Job result = slurmJobProvider.runJob(jobOptions);
+        final Job result = slurmJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH);
 
         Assertions.assertEquals(expectedFilteredJob, result);
-    }
-
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(longs = {SOME_WRONG_JOB_ID})
-    public void shouldThrowWhenPassWrongRequestToDeleteJob(final Long jobId) {
-        final DeleteJobFilter deleteJobFilter = new DeleteJobFilter(false, jobId, null);
-        Assertions.assertThrows(GridEngineException.class, () -> slurmJobProvider.deleteJob(deleteJobFilter));
     }
 
     @ParameterizedTest

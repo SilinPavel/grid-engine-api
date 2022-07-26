@@ -47,6 +47,12 @@ public interface JobLogProvider extends CommandTypeAware {
      * @param logType The type of required log file.
      * @return The job log file like a stream.
      */
-    InputStream getJobLogFile(final int jobId, final JobLogInfo.Type logType);
+    InputStream getJobLogFile(final long jobId, final JobLogInfo.Type logType);
 
+    /**
+     * Get a job log path.
+     *
+     * @return The path to the job log directory.
+     */
+    String getJobLogDir();
 }

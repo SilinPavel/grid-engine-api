@@ -88,6 +88,7 @@ public class SgeJobProviderTest {
     private static final String SOME_RUNNING_STATUS_CODE = "r";
     private static final String TEST_QUEUE = "test_queue";
     private static final String JOB_COMMAND = "simple.sh";
+    private static final String SOME_JOB_LOG_DIRECTORY_PATH = "/mnt/logs";
 
     private static final String TEXT_JOB_SUBMITTED = "Your job 7 (\"demo_v.sh\") has been submitted";
 
@@ -388,27 +389,17 @@ public class SgeJobProviderTest {
     @MethodSource("provideInvalidJobOptions")
     public void shouldThrowExceptionMakingQsubCommand(final JobOptions jobOptions) {
         final Throwable thrown = Assertions.assertThrows(GridEngineException.class,
-                () -> sgeJobProvider.runJob(jobOptions));
+                () -> sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
         Assertions.assertNotNull(thrown.getMessage());
     }
 
     static Stream<Arguments> provideInvalidJobOptions() {
         return Stream.of(
-                Arguments.of(JobOptions.builder().command(null).build()),
-                Arguments.of(JobOptions.builder().command(EMPTY_STRING).build()),
                 Arguments.of(JobOptions.builder().parallelEnvOptions(new ParallelEnvOptions(EMPTY_STRING, 1, 100))
                         .command(JOB_COMMAND).build()),
                 Arguments.of(JobOptions.builder().parallelEnvOptions(new ParallelEnvOptions(null, 1, 100))
                         .command(JOB_COMMAND).build())
         );
-    }
-
-    @Test
-    public void shouldThrowsExceptionBecauseNoCommand() {
-        final JobOptions jobOptions = new JobOptions();
-        final Throwable thrown = Assertions.assertThrows(GridEngineException.class, () ->
-                sgeJobProvider.runJob(jobOptions));
-        Assertions.assertNotNull(thrown.getMessage());
     }
 
     @ParameterizedTest
@@ -423,7 +414,7 @@ public class SgeJobProviderTest {
         commandResult.setStdErr(EMPTY_LIST);
 
         mockCommandCompilation(QSUB, commandResult, command);
-        final Job result = sgeJobProvider.runJob(jobOptions);
+        final Job result = sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH);
 
         Assertions.assertEquals(expectedFilteredJob.getId(), result.getId());
     }
@@ -449,7 +440,7 @@ public class SgeJobProviderTest {
         commandResult.setStdErr(EMPTY_LIST);
 
         mockCommandCompilation(QSUB, commandResult, QSUB, COMMAND_SCRIPT_FILE);
-        final Job result = sgeJobProvider.runJob(jobOptions);
+        final Job result = sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH);
 
         Assertions.assertEquals(expectedFilteredJob, result);
     }
@@ -595,28 +586,6 @@ public class SgeJobProviderTest {
                 Mockito.matches(command),
                 Mockito.any());
         doReturn(commandResult).when(mockCmdExecutor).execute(compiledArray);
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideWrongDeleteRequests")
-    public void shouldThrowsExceptionDuringDeletionBecauseNotCorrectRequest(final boolean isForce, final Long id,
-                                                                            final String user) {
-        final DeleteJobFilter deleteJobFilter = DeleteJobFilter.builder()
-                .force(isForce)
-                .id(id)
-                .user(user)
-                .build();
-        final Throwable thrown = Assertions.assertThrows(GridEngineException.class, () ->
-                sgeJobProvider.deleteJob(deleteJobFilter));
-        Assertions.assertNotNull(thrown.getMessage());
-    }
-
-    static Stream<Arguments> provideWrongDeleteRequests() {
-        return Stream.of(
-                Arguments.of(false, 0L, SGEUSER),
-                Arguments.of(true, null, EMPTY_STRING),
-                Arguments.of(false, null, null)
-        );
     }
 
     @ParameterizedTest

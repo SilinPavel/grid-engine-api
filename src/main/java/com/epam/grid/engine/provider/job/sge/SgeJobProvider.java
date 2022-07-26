@@ -19,7 +19,6 @@
 
 package com.epam.grid.engine.provider.job.sge;
 
-import com.epam.grid.engine.cmd.CmdExecutor;
 import com.epam.grid.engine.cmd.CommandArgUtils;
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
@@ -38,13 +37,11 @@ import com.epam.grid.engine.entity.job.sge.SgeQueueListing;
 import com.epam.grid.engine.mapper.job.sge.SgeJobMapper;
 import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.job.JobProvider;
-import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import com.epam.grid.engine.provider.utils.JaxbUtils;
 import com.epam.grid.engine.provider.utils.sge.job.QstatCommandParser;
 import com.epam.grid.engine.provider.utils.CommandsUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -64,7 +61,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.epam.grid.engine.provider.utils.CommandsUtils.mergeOutputLines;
-import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 import static com.epam.grid.engine.utils.TextConstants.NEW_LINE_DELIMITER;
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
 
@@ -87,7 +83,7 @@ public class SgeJobProvider implements JobProvider {
     private static final String LOG_DIR = "logDir";
     private static final String ENV_VARIABLES = "envVariables";
     private static final String EXECUTION_RESULT = "Execution result - ";
-    private static final Pattern FIND_ID_PATTERN = Pattern.compile("\\s\\d+\\s");
+    private static final Pattern SUBMITTED_JOB_ID_PATTERN = Pattern.compile("Your job (\\d+).* has been submitted");
     private static final Pattern FIND_DELETE_ID_PATTERN = Pattern.compile("\\d+");
 
     /**
@@ -105,21 +101,12 @@ public class SgeJobProvider implements JobProvider {
      */
     private final GridEngineCommandCompiler commandCompiler;
 
-    /**
-     * The path to the directory where all log files will be stored
-     * occurred when processing the job.
-     */
-    private final String logDir;
-
     public SgeJobProvider(final SgeJobMapper jobMapper,
                           final SimpleCmdExecutor simpleCmdExecutor,
-                          final GridEngineCommandCompiler commandCompiler,
-                          @Value("${job.log.dir}") final String logDir,
-                          @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
+                          final GridEngineCommandCompiler commandCompiler) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir);
     }
 
     /**
@@ -156,12 +143,29 @@ public class SgeJobProvider implements JobProvider {
      * Launches the job with the specified parameters.
      *
      * @param options Parameters for launching the job.
+     * @param logDir  the path to the directory where all log files will be stored
+     *                occurred when processing the job.
      * @return Launched job.
      */
     @Override
-    public Job runJob(final JobOptions options) {
-        validateJobOptions(options);
-        return buildNewJob(getResultOfExecutedCommand(simpleCmdExecutor, makeQsubCommand(options)));
+    public Job runJob(final JobOptions options, final String logDir) {
+        if (!isValidParallelEnvOptions(options.getParallelEnvOptions())) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Invalid PE specification!");
+        }
+        final CommandResult result = simpleCmdExecutor.execute(makeQsubCommand(options, logDir));
+        if (result.getExitCode() != 0 || result.getStdOut().isEmpty()) {
+            CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        final Matcher matcher = SUBMITTED_JOB_ID_PATTERN.matcher(result.getStdOut().get(0));
+        if (!matcher.find()) {
+            CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return Job.builder()
+                .id(Long.parseLong(matcher.group(1)))
+                .state(JobState.builder()
+                        .category(JobState.Category.PENDING)
+                        .build())
+                .build();
     }
 
     /**
@@ -172,7 +176,6 @@ public class SgeJobProvider implements JobProvider {
      */
     @Override
     public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
-        validateDeleteRequest(deleteJobFilter);
         return parseDeleteCommandResult(makeQdelCommand(deleteJobFilter));
     }
 
@@ -199,23 +202,17 @@ public class SgeJobProvider implements JobProvider {
      * Creates the structure of an executable command based on the passed options.
      *
      * @param options User-defined options.
+     * @param logDir  the path to the directory where all log files will be stored
+     *                occurred when processing the job.
      * @return The structure of an executable command.
      */
-    private String[] makeQsubCommand(final JobOptions options) {
+    private String[] makeQsubCommand(final JobOptions options, final String logDir) {
         final Context context = new Context();
         context.setVariable(OPTIONS, options);
         context.setVariable(LOG_DIR, logDir);
         context.setVariable(ARGUMENTS, CommandArgUtils.toEscapeQuotes(options.getArguments()));
         context.setVariable(ENV_VARIABLES, CommandArgUtils.envVariablesMapToString(options.getEnvVariables()));
         return commandCompiler.compileCommand(getProviderType(), QSUB_COMMAND, context);
-    }
-
-    private String getResultOfExecutedCommand(final CmdExecutor cmdExecutor, final String[] command) {
-        final CommandResult result = cmdExecutor.execute(command);
-        if (result.getExitCode() != 0) {
-            CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return parseJobId(result.getStdOut().get(0));
     }
 
     /**
@@ -228,23 +225,6 @@ public class SgeJobProvider implements JobProvider {
         final Context context = new Context();
         context.setVariable(JOB_FILTER, filter);
         return commandCompiler.compileCommand(getProviderType(), QDEL_COMMAND, context);
-    }
-
-    /**
-     * This method checks the correctness of the user-defined conditions for searching for deleted jobs.
-     *
-     * @param deleteJobFilter User-defined conditions.
-     */
-    private void validateDeleteRequest(final DeleteJobFilter deleteJobFilter) {
-        if (!StringUtils.hasText(deleteJobFilter.getUser()) && deleteJobFilter.getId() == null) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    String.format("Incorrect filling in %s. Either `id` or `user` should be specified for job removal!",
-                            deleteJobFilter));
-        }
-        if (deleteJobFilter.getId() != null && deleteJobFilter.getId() == 0) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    String.format("Id specified in %s for job removal is invalid!", deleteJobFilter));
-        }
     }
 
     /**
@@ -270,29 +250,7 @@ public class SgeJobProvider implements JobProvider {
                 + NEW_LINE_DELIMITER + mergeOutputLines(result.getStdErr()));
     }
 
-    /**
-     * Gets the job ID from the string.
-     *
-     * @param jobString A string that can contain the job ID.
-     * @return JobID or an empty string.
-     */
-    private String parseJobId(final String jobString) {
-        final Matcher matcher = FIND_ID_PATTERN.matcher(jobString);
-        return matcher.find()
-                ? matcher.group().trim()
-                : EMPTY_STRING;
-    }
-
-    private void validateJobOptions(final JobOptions options) {
-        if (!StringUtils.hasText(options.getCommand())) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Command should be specified!");
-        }
-        if (!checkParallelEnvOptions(options.getParallelEnvOptions())) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Invalid PE specification!");
-        }
-    }
-
-    private boolean checkParallelEnvOptions(final ParallelEnvOptions options) {
+    private boolean isValidParallelEnvOptions(final ParallelEnvOptions options) {
         return options == null
                 || StringUtils.hasText(options.getName())
                 && (options.getMin() > 0 || options.getMax() > 0)
@@ -310,15 +268,6 @@ public class SgeJobProvider implements JobProvider {
     private String parseUser(final List<String> stdOut) {
         final String stringStdOut = mergeOutputLines(stdOut);
         return stringStdOut.split(SPACE)[0];
-    }
-
-    private Job buildNewJob(final String id) {
-        return Job.builder()
-                .id(Integer.parseInt(id))
-                .state(JobState.builder()
-                        .category(JobState.Category.PENDING)
-                        .build())
-                .build();
     }
 
     private Listing<Job> mapJobs(final SgeQueueListing sgeQueueListing, final JobFilter jobFilter) {

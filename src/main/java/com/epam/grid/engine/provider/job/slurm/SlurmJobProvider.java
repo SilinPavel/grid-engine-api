@@ -19,7 +19,6 @@
 
 package com.epam.grid.engine.provider.job.slurm;
 
-import com.epam.grid.engine.cmd.CmdExecutor;
 import com.epam.grid.engine.cmd.CommandArgUtils;
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
@@ -37,12 +36,10 @@ import com.epam.grid.engine.mapper.job.slurm.SlurmJobMapper;
 import com.epam.grid.engine.provider.job.JobProvider;
 
 import com.epam.grid.engine.provider.utils.CommandsUtils;
-import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import com.epam.grid.engine.provider.utils.slurm.job.SacctCommandParser;
 import com.epam.grid.engine.utils.TextConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -56,9 +53,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import static com.epam.grid.engine.utils.TextConstants.COLON;
-import static com.epam.grid.engine.utils.TextConstants.EMPTY_STRING;
 
 /**
  * This class performs various actions with jobs for the SLURM engine.
@@ -100,21 +94,12 @@ public class SlurmJobProvider implements JobProvider {
      */
     private final GridEngineCommandCompiler commandCompiler;
 
-    /**
-     * The path to the directory where all log files will be stored
-     * occurred when processing the job.
-     */
-    private final String logDir;
-
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
-                            final GridEngineCommandCompiler commandCompiler,
-                            @Value("${job.log.dir}") final String logDir,
-                            @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
+                            final GridEngineCommandCompiler commandCompiler) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir);
     }
 
     @Override
@@ -135,9 +120,27 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     @Override
-    public Job runJob(final JobOptions options) {
-        validateJobOptions(options);
-        return buildNewJob(getResultOfExecutedCommand(simpleCmdExecutor, makeSbatchCommand(options)));
+    public Job runJob(final JobOptions options, final String logDir) {
+        if (options.getPriority() != null && (options.getPriority() < 0 || options.getPriority() > MAX_SENT_PRIORITY)) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and 4_294_967_294");
+        }
+        if (options.getParallelEnvOptions() != null) {
+            throw new UnsupportedOperationException("Parallel environment variables are not supported yet!");
+        }
+        final CommandResult result = simpleCmdExecutor.execute(makeSbatchCommand(options, logDir));
+        if (result.getExitCode() != 0 || result.getStdOut().isEmpty()) {
+            CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        final Matcher matcher = SUBMITTED_JOB_PATTERN.matcher(result.getStdOut().get(0));
+        if (!matcher.find()) {
+            CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return Job.builder()
+                .id(Long.parseLong(matcher.group(1)))
+                .state(JobState.builder()
+                        .category(JobState.Category.PENDING)
+                        .build())
+                .build();
     }
 
     /**
@@ -148,16 +151,6 @@ public class SlurmJobProvider implements JobProvider {
      */
     @Override
     public DeletedJobInfo deleteJob(final DeleteJobFilter deleteJobFilter) {
-        if (!StringUtils.hasText(deleteJobFilter.getUser()) && deleteJobFilter.getId() == null) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    String.format("Incorrect filling in %s. Either `id` or `user` should be specified for job removal!",
-                            deleteJobFilter));
-        }
-        if (deleteJobFilter.getId() != null && deleteJobFilter.getId() <= 0) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    String.format("Id specified in %s for job removal is invalid!", deleteJobFilter));
-        }
-
         final String jobOwner;
         if (StringUtils.hasText(deleteJobFilter.getUser())) {
             jobOwner = deleteJobFilter.getUser();
@@ -172,7 +165,7 @@ public class SlurmJobProvider implements JobProvider {
 
         final Set<String> errorDeletingJobs = result.getStdErr().stream()
                 .filter((s) -> s.startsWith(KILL_JOB_ERROR_PREFIX))
-                .map((s) -> s.substring(ERROR_JOB_ID_POSITION, s.indexOf(COLON, ERROR_JOB_ID_POSITION)))
+                .map((s) -> s.substring(ERROR_JOB_ID_POSITION, s.indexOf(TextConstants.COLON, ERROR_JOB_ID_POSITION)))
                 .collect(Collectors.toSet());
 
         final List<Long> deletedJobIds = result.getStdErr().stream()
@@ -192,9 +185,11 @@ public class SlurmJobProvider implements JobProvider {
      * Creates the structure of an executable command based on the passed options.
      *
      * @param options User-defined options.
+     * @param logDir  the path to the directory where all log files will be stored
+     *                occurred when processing the job.
      * @return The structure of an executable command.
      */
-    private String[] makeSbatchCommand(final JobOptions options) {
+    private String[] makeSbatchCommand(final JobOptions options, final String logDir) {
         final Context context = new Context();
         context.setVariable(OPTIONS, options);
         context.setVariable(LOG_DIR, logDir);
@@ -210,48 +205,6 @@ public class SlurmJobProvider implements JobProvider {
             context.setVariable(ARGUMENTS, CommandArgUtils.toEscapeQuotes(options.getArguments()));
         }
         return commandCompiler.compileCommand(getProviderType(), SBATCH_COMMAND, context);
-    }
-
-    private void validateJobOptions(final JobOptions options) {
-        if (!StringUtils.hasText(options.getCommand())) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Command should be specified!");
-        }
-        if (options.getPriority() != null && (options.getPriority() < 0 || options.getPriority() > MAX_SENT_PRIORITY)) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and 4_294_967_294");
-        }
-        if (options.getParallelEnvOptions() != null) {
-            throw new UnsupportedOperationException("Parallel environment variables are not supported yet!");
-        }
-    }
-
-    private String getResultOfExecutedCommand(final CmdExecutor cmdExecutor, final String[] command) {
-        final CommandResult result = cmdExecutor.execute(command);
-        if (result.getExitCode() != 0) {
-            CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return parseJobId(result.getStdOut().get(0));
-    }
-
-    /**
-     * Gets the job ID from the string.
-     *
-     * @param jobString A string that can contain the job ID.
-     * @return JobID or an empty string.
-     */
-    private String parseJobId(final String jobString) {
-        final Matcher matcher = SUBMITTED_JOB_PATTERN.matcher(jobString);
-        return matcher.find()
-                ? matcher.group(1)
-                : EMPTY_STRING;
-    }
-
-    private Job buildNewJob(final String id) {
-        return Job.builder()
-                .id(Integer.parseInt(id))
-                .state(JobState.builder()
-                        .category(JobState.Category.PENDING)
-                        .build())
-                .build();
     }
 
     /**
