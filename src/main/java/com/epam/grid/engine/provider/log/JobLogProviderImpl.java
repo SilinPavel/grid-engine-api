@@ -124,6 +124,14 @@ public class JobLogProviderImpl implements JobLogProvider {
         }
     }
 
+    /**
+     * Gets a path to job log file.
+     * Note: the names of the log files are defined by the job submission command templates for each grid-engine.
+     *
+     * @param jobId   The job identifier.
+     * @param logType The type of required log file.
+     * @return The job path to job log file.
+     */
     private String getLogFilePath(final long jobId, final JobLogInfo.Type logType) {
         return Paths.get(logDir, jobId + DOT + logType.getSuffix()).toString();
     }
