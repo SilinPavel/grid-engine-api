@@ -32,6 +32,7 @@ import com.epam.grid.engine.entity.job.Job;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.entity.job.JobState;
 import com.epam.grid.engine.entity.job.ParallelEnvOptions;
+import com.epam.grid.engine.entity.job.ParallelExecutionOptions;
 import com.epam.grid.engine.exception.GridEngineException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
@@ -400,6 +401,17 @@ public class SgeJobProviderTest {
                 Arguments.of(JobOptions.builder().parallelEnvOptions(new ParallelEnvOptions(null, 1, 100))
                         .command(JOB_COMMAND).build())
         );
+    }
+
+    @Test
+    public void shouldThrowExceptionBecauseParallelExecOptionsAreUsed() {
+        final JobOptions jobOptions = new JobOptions();
+        jobOptions.setCommand(COMMAND_SCRIPT_FILE);
+        jobOptions.setParallelExecutionOptions(ParallelExecutionOptions.builder().numTasks(1).numTasksPerNode(1)
+                .cpusPerTask(1).nodes(1).build());
+        final Throwable thrown = Assertions.assertThrows(UnsupportedOperationException.class, () ->
+                sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
+        Assertions.assertNotNull(thrown.getMessage());
     }
 
     @ParameterizedTest

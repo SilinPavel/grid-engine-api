@@ -31,6 +31,7 @@ import com.epam.grid.engine.entity.job.Job;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.entity.job.JobState;
 import com.epam.grid.engine.entity.job.ParallelEnvOptions;
+import com.epam.grid.engine.entity.job.ParallelExecutionOptions;
 import com.epam.grid.engine.exception.GridEngineException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.CoreMatchers.containsString;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -156,6 +161,9 @@ public class SlurmJobProviderTest {
                     TERMINATING_JOB_PREFIX + SOME_CORRECT_JOB_ID_STRING,
                     String.format(ERROR_DELETING_STRING_TEMPLATE, SOME_CORRECT_JOB_ID_STRING),
                     TERMINATING_JOB_PREFIX + SECOND_CORRECT_JOB_ID);
+
+    private static final String SLURM_JOB_WITH_PARALLEL_ENV_OPTS = "ParallelExecutionOptions(numTasks=4, nodes=2, "
+            + "cpusPerTask=4, numTasksPerNode=2, exclusive=true)";
 
     @Autowired
     private SlurmJobProvider slurmJobProvider;
@@ -396,8 +404,6 @@ public class SlurmJobProviderTest {
         Assertions.assertEquals(binaryContextArgument, contextCaptor.getValue().getVariable(BINARY_COMMAND));
     }
 
-
-
     @ParameterizedTest
     @MethodSource("provideInvalidJobOptions")
     public void shouldThrowWhenPassedIllegalJobOptionsToJobSubmitting(final JobOptions jobOptions) {
@@ -463,6 +469,45 @@ public class SlurmJobProviderTest {
         final Job result = slurmJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH);
 
         Assertions.assertEquals(expectedFilteredJob, result);
+    }
+
+    @Test
+    public void shouldReturnCorrectSetParallelExecutionOptions() {
+        final JobOptions testJobOptions = JobOptions.builder()
+                .parallelExecutionOptions(ParallelExecutionOptions.builder()
+                        .numTasks(4)
+                        .nodes(2)
+                        .cpusPerTask(4)
+                        .numTasksPerNode(2)
+                        .exclusive(true)
+                        .build())
+                .command(JOB_NAME1)
+                .build();
+
+        final CommandResult commandResult = new CommandResult(List.of(SOME_JOB_IS_SUBMITTED), 0, EMPTY_LIST);
+        doReturn(commandResult).when(mockCmdExecutor).execute(Mockito.any());
+
+        Assertions.assertEquals(slurmJobProvider.runJob(testJobOptions, SOME_JOB_LOG_DIRECTORY_PATH), correctBuild());
+
+        final ArgumentCaptor<IContext> contextCaptor = ArgumentCaptor.forClass(IContext.class);
+        Mockito.verify(mockCommandCompiler).compileCommand(Mockito.any(), Mockito.any(), contextCaptor.capture());
+
+        assertThat(contextCaptor.getValue().getVariable("options").toString(),
+                containsString(SLURM_JOB_WITH_PARALLEL_ENV_OPTS));
+    }
+
+    @Test
+    public void shouldThrowUnsupportedExceptionWhenParallelExecutionOptionsAreNegative() {
+        final JobOptions jobOptions = JobOptions.builder().command(JOB_NAME1)
+                .parallelExecutionOptions(ParallelExecutionOptions.builder()
+                        .numTasks(-4)
+                        .nodes(-2)
+                        .cpusPerTask(-4)
+                        .numTasksPerNode(-2)
+                        .build())
+                .build();
+        Assertions.assertThrows(UnsupportedOperationException.class,
+                () -> slurmJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
     }
 
     @ParameterizedTest

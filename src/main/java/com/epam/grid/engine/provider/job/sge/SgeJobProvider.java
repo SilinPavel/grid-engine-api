@@ -149,6 +149,10 @@ public class SgeJobProvider implements JobProvider {
      */
     @Override
     public Job runJob(final JobOptions options, final String logDir) {
+        if (options.getParallelExecutionOptions() != null) {
+            throw new UnsupportedOperationException("ParallelExecutionOptions can be used only for SLURM grid engine. "
+                    + "For SGE engine please use ParallelEnvOptions");
+        }
         if (!isValidParallelEnvOptions(options.getParallelEnvOptions())) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Invalid PE specification!");
         }
