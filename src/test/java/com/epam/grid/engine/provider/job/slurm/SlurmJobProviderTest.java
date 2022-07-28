@@ -19,6 +19,7 @@
 
 package com.epam.grid.engine.provider.job.slurm;
 
+import com.epam.grid.engine.TestPropertiesWithSlurmEngine;
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
@@ -53,7 +54,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-@SpringBootTest(properties = {"grid.engine.type=SLURM"})
+@SpringBootTest
+@TestPropertiesWithSlurmEngine
 public class SlurmJobProviderTest {
 
     private static final String SLURM_USER = "root";

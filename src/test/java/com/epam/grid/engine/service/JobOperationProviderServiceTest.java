@@ -19,6 +19,7 @@
 
 package com.epam.grid.engine.service;
 
+import com.epam.grid.engine.TestPropertiesWithSgeEngine;
 import com.epam.grid.engine.entity.JobFilter;
 import com.epam.grid.engine.entity.Listing;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
@@ -47,7 +48,8 @@ import java.util.stream.Stream;
 
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.EMPTY_STRING;
 
-@SpringBootTest(properties = {"grid.engine.type=SGE"})
+@SpringBootTest
+@TestPropertiesWithSgeEngine
 public class JobOperationProviderServiceTest {
 
     private static final long SOME_JOB_ID = 7L;
@@ -59,7 +61,6 @@ public class JobOperationProviderServiceTest {
     private static final String DATE = "1986-04-08T12:30:00";
     private static final String PENDING_STATE = "pending";
     private static final String SOME_JOB_LOG_DIRECTORY_PATH = "/mnt/logs";
-
 
     @Autowired
     private JobOperationProviderService jobOperationProviderService;

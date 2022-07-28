@@ -19,9 +19,9 @@
 
 package com.epam.grid.engine.provider.pe.sge;
 
+import com.epam.grid.engine.TestPropertiesWithSgeEngine;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
-import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.ParallelEnvFilter;
 import com.epam.grid.engine.entity.parallelenv.AllocationRuleType;
 import com.epam.grid.engine.entity.parallelenv.ParallelEnv;
@@ -52,7 +52,8 @@ import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.EMPTY_LIS
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.EMPTY_STRING;
 import static org.mockito.Mockito.doReturn;
 
-@SpringBootTest(properties = {"grid.engine.type=SGE"})
+@SpringBootTest
+@TestPropertiesWithSgeEngine
 public class SgePeProviderTest {
 
     private static final List<String> VALID_PE = List.of(

@@ -19,6 +19,7 @@
 
 package com.epam.grid.engine.provider.job.sge;
 
+import com.epam.grid.engine.TestPropertiesWithSgeEngine;
 import com.epam.grid.engine.cmd.GridEngineCommandCompiler;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
@@ -53,7 +54,8 @@ import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.PENDING_S
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.RUNNING_STRING;
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.TYPE_XML;
 
-@SpringBootTest(properties = {"grid.engine.type=SGE"})
+@SpringBootTest
+@TestPropertiesWithSgeEngine
 public class SgeJobProviderTest {
 
     private static final long SOME_JOB_ID_1 = 10;
