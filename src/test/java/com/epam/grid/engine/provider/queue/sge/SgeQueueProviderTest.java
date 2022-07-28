@@ -19,6 +19,7 @@
 
 package com.epam.grid.engine.provider.queue.sge;
 
+import com.epam.grid.engine.TestPropertiesWithSgeEngine;
 import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.QueueFilter;
@@ -49,7 +50,8 @@ import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.SINGLETON
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.SPACE;
 import static org.mockito.Mockito.doReturn;
 
-@SpringBootTest(properties = {"grid.engine.type=SGE"})
+@SpringBootTest
+@TestPropertiesWithSgeEngine
 public class SgeQueueProviderTest {
 
     private static final List<String> validQueue = List.of(
