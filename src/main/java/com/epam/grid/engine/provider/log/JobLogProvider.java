@@ -49,4 +49,10 @@ public interface JobLogProvider extends CommandTypeAware {
      */
     InputStream getJobLogFile(final long jobId, final JobLogInfo.Type logType);
 
+    /**
+     * Get a job log path.
+     *
+     * @return The path to the job log directory.
+     */
+    String getJobLogDir();
 }

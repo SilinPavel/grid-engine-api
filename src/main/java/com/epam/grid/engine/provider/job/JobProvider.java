@@ -52,8 +52,10 @@ public interface JobProvider extends CommandTypeAware {
      * Launches the job with the specified parameters.
      *
      * @param options Parameters for launching the job.
+     * @param logDir  the path to the directory where all log files will be stored
+     *                occurred when processing the job
      * @return Launched job.
      */
-    Job runJob(JobOptions options);
+    Job runJob(JobOptions options, String logDir);
 
 }

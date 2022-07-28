@@ -7,20 +7,25 @@ import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.job.JobLogInfo;
 import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 
+import javax.annotation.PostConstruct;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static com.epam.grid.engine.utils.TextConstants.DOT;
 import static com.epam.grid.engine.utils.TextConstants.SPACE;
 
+@Slf4j
 @Service
 public class JobLogProviderImpl implements JobLogProvider {
 
@@ -119,12 +124,40 @@ public class JobLogProviderImpl implements JobLogProvider {
         }
     }
 
+    /**
+     * Gets a path to job log file.
+     * Note: the names of the log files are defined by the job submission command templates for each grid-engine.
+     *
+     * @param jobId   The job identifier.
+     * @param logType The type of required log file.
+     * @return The job path to job log file.
+     */
     private String getLogFilePath(final long jobId, final JobLogInfo.Type logType) {
         return Paths.get(logDir, jobId + DOT + logType.getSuffix()).toString();
     }
 
     @Override
+    public String getJobLogDir() {
+        return logDir;
+    }
+
+    @Override
     public CommandType getProviderType() {
         return CommandType.COMMON;
+    }
+
+    /**
+     * This method checks for job log directory existence and write accessibility,
+     * in case of failure, the application hasn't to start.
+     */
+    @PostConstruct
+    public void checkLogDirAvailability() {
+        final Path logPath = Path.of(logDir);
+        if (!Files.isDirectory(logPath) || !Files.isWritable(logPath)) {
+            final String message = "The directory to log files was not found or write permissions are missing: "
+                    + logDir;
+            log.error(message);
+            throw new IllegalStateException(message);
+        }
     }
 }

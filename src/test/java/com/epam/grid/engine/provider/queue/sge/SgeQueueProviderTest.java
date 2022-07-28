@@ -125,11 +125,11 @@ public class SgeQueueProviderTest {
     private static final Integer INTEGER_ZERO = 0;
     private static final Integer INTEGER_ONE = 1;
 
-    @MockBean
-    private SimpleCmdExecutor mockCmdExecutor;
-
     @Autowired
     private SgeQueueProvider sgeQueueProvider;
+
+    @MockBean
+    private SimpleCmdExecutor mockCmdExecutor;
 
     private final CommandResult commandResult = new CommandResult();
     private final SlotsDescription slotsDescription = new SlotsDescription(1,

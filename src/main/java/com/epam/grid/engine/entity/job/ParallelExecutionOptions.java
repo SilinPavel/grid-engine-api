@@ -25,14 +25,31 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * This class is used to assign parallel environment options. Can be used only in SGE.
+ * This class is used to assign parallel environment options. Can be used only in SLURM.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ParallelEnvOptions {
-    private String name;
-    private int min;
-    private int max;
+public class ParallelExecutionOptions {
+    /**
+     * Number of tasks to be created for the job.
+     */
+    private int numTasks;
+    /**
+     * Minimum/maximum number of nodes allocated to the job.
+     */
+    private int nodes;
+    /**
+     * Number of CPUs allocated per task.
+     */
+    private int cpusPerTask;
+    /**
+     * Maximum number of tasks per allocated node.
+     */
+    private int numTasksPerNode;
+    /**
+     * Prevents sharing of allocated nodes with other jobs. Suballocates CPUs to job steps.
+     */
+    private boolean exclusive;
 }

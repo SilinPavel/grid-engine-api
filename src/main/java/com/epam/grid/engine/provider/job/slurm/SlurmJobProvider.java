@@ -31,17 +31,16 @@ import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.entity.job.JobState;
 import com.epam.grid.engine.entity.job.DeletedJobInfo;
 import com.epam.grid.engine.entity.job.DeleteJobFilter;
+import com.epam.grid.engine.entity.job.ParallelExecutionOptions;
 import com.epam.grid.engine.exception.GridEngineException;
 import com.epam.grid.engine.mapper.job.slurm.SlurmJobMapper;
 import com.epam.grid.engine.provider.job.JobProvider;
 
 import com.epam.grid.engine.provider.utils.CommandsUtils;
-import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import com.epam.grid.engine.provider.utils.slurm.job.SacctCommandParser;
 import com.epam.grid.engine.utils.TextConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.ListUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -76,7 +75,6 @@ public class SlurmJobProvider implements JobProvider {
     private static final String ENV_VARIABLES = "envVariables";
     private static final String START_TERMINATING_JOB_PREFIX = "scancel: Terminating job";
     private static final String KILL_JOB_ERROR_PREFIX = "scancel: error: Kill job error on job id";
-    private static final String SQUEUE_JOB_ID_ERROR_PATTERN = ".*Invalid job id specified.*";
     private static final int JOB_ID_START_POSITION = START_TERMINATING_JOB_PREFIX.length() + 1;
     private static final int ERROR_JOB_ID_POSITION = KILL_JOB_ERROR_PREFIX.length() + 1;
     private static final String JOBS_DELETING_EXECUTION_RESULT = "Jobs deleting result: ";
@@ -97,21 +95,12 @@ public class SlurmJobProvider implements JobProvider {
      */
     private final GridEngineCommandCompiler commandCompiler;
 
-    /**
-     * The path to the directory where all log files will be stored
-     * occurred when processing the job.
-     */
-    private final String logDir;
-
     public SlurmJobProvider(final SlurmJobMapper jobMapper,
                             final SimpleCmdExecutor simpleCmdExecutor,
-                            final GridEngineCommandCompiler commandCompiler,
-                            @Value("${job.log.dir}") final String logDir,
-                            @Value("${grid.engine.shared.folder}") final String gridSharedFolder) {
+                            final GridEngineCommandCompiler commandCompiler) {
         this.jobMapper = jobMapper;
         this.simpleCmdExecutor = simpleCmdExecutor;
         this.commandCompiler = commandCompiler;
-        this.logDir = DirectoryPathUtils.resolvePathToAbsolute(gridSharedFolder, logDir);
     }
 
     @Override
@@ -123,7 +112,7 @@ public class SlurmJobProvider implements JobProvider {
     public Listing<Job> filterJobs(final JobFilter jobFilter) {
         SacctCommandParser.filterCorrectJobIds(jobFilter);
         final CommandResult result = simpleCmdExecutor.execute(makeSqueueCommand(jobFilter));
-        if (result.getExitCode() != 0 && jobNotFoundByIdError(result)) {
+        if (result.getExitCode() != 0) {
             CommandsUtils.throwExecutionDetails(result);
         } else if (!result.getStdErr().isEmpty()) {
             log.warn(CommandsUtils.mergeOutputLines(result.getStdErr()));
@@ -132,9 +121,19 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     @Override
-    public Job runJob(final JobOptions options) {
-        validateJobOptions(options);
-        final CommandResult result = simpleCmdExecutor.execute(makeSbatchCommand(options));
+    public Job runJob(final JobOptions options, final String logDir) {
+        if (options.getParallelEnvOptions() != null) {
+            throw new UnsupportedOperationException("Unsupported option was specified, for SLURM engine please "
+                    + "use ParallelExecutionOptions");
+        }
+        if (checkParallelExecutionOptions(options.getParallelExecutionOptions())) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "All Parallel execution options except Exclusive "
+                    + "should be greater than 0!");
+        }
+        if (options.getPriority() != null && (options.getPriority() < 0 || options.getPriority() > MAX_SENT_PRIORITY)) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and 4_294_967_294");
+        }
+        final CommandResult result = simpleCmdExecutor.execute(makeSbatchCommand(options, logDir));
         if (result.getExitCode() != 0 || result.getStdOut().isEmpty()) {
             CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -142,7 +141,12 @@ public class SlurmJobProvider implements JobProvider {
         if (!matcher.find()) {
             CommandsUtils.throwExecutionDetails(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return buildNewJob(Long.parseLong(matcher.group(1).trim()));
+        return Job.builder()
+                .id(Long.parseLong(matcher.group(1)))
+                .state(JobState.builder()
+                        .category(JobState.Category.PENDING)
+                        .build())
+                .build();
     }
 
     /**
@@ -153,7 +157,6 @@ public class SlurmJobProvider implements JobProvider {
      */
     @Override
     public Listing<DeletedJobInfo> deleteJob(final DeleteJobFilter deleteJobFilter) {
-        validateDeleteRequest(deleteJobFilter);
         final Map<Long, String> jobOwners = getJobOwners(deleteJobFilter);
         if (jobOwners.isEmpty()) {
             throw new GridEngineException(HttpStatus.NOT_FOUND,
@@ -189,34 +192,14 @@ public class SlurmJobProvider implements JobProvider {
     }
 
     /**
-     * This method checks the correctness of the user-defined conditions for searching for deleted jobs.
-     *
-     * @param deleteJobFilter User-defined conditions.
-     */
-    private void validateDeleteRequest(final DeleteJobFilter deleteJobFilter) {
-        if (!StringUtils.hasText(deleteJobFilter.getUser()) && CollectionUtils.isEmpty(deleteJobFilter.getIds())) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                    String.format("Incorrect filling in %s. Either at least one `id` or `user` must be specified"
-                            + " to delete jobs!", deleteJobFilter));
-        }
-        ListUtils.emptyIfNull(deleteJobFilter.getIds()).stream()
-                .map(id -> id != null ? id : -1L)
-                .filter(id -> id <= 0)
-                .findFirst()
-                .ifPresent(id -> {
-                    throw new GridEngineException(HttpStatus.BAD_REQUEST,
-                            String.format("At least one `id` is incorrect specified in %s for job removal!",
-                                    deleteJobFilter));
-                });
-    }
-
-    /**
      * Creates the structure of an executable command based on the passed options.
      *
      * @param options User-defined options.
+     * @param logDir  the path to the directory where all log files will be stored
+     *                occurred when processing the job.
      * @return The structure of an executable command.
      */
-    private String[] makeSbatchCommand(final JobOptions options) {
+    private String[] makeSbatchCommand(final JobOptions options, final String logDir) {
         final Context context = new Context();
         context.setVariable(OPTIONS, options);
         context.setVariable(LOG_DIR, logDir);
@@ -232,27 +215,6 @@ public class SlurmJobProvider implements JobProvider {
             context.setVariable(ARGUMENTS, CommandArgUtils.toEscapeQuotes(options.getArguments()));
         }
         return commandCompiler.compileCommand(getProviderType(), SBATCH_COMMAND, context);
-    }
-
-    private void validateJobOptions(final JobOptions options) {
-        if (!StringUtils.hasText(options.getCommand())) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Command should be specified!");
-        }
-        if (options.getPriority() != null && (options.getPriority() < 0 || options.getPriority() > MAX_SENT_PRIORITY)) {
-            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Priority should be between 0 and 4_294_967_294");
-        }
-        if (options.getParallelEnvOptions() != null) {
-            throw new UnsupportedOperationException("Parallel environment variables are not supported yet!");
-        }
-    }
-
-    private Job buildNewJob(final long id) {
-        return Job.builder()
-                .id(id)
-                .state(JobState.builder()
-                        .category(JobState.Category.PENDING)
-                        .build())
-                .build();
     }
 
     /**
@@ -280,11 +242,6 @@ public class SlurmJobProvider implements JobProvider {
         return new Listing<>();
     }
 
-    private boolean jobNotFoundByIdError(final CommandResult result) {
-        return ListUtils.emptyIfNull(result.getStdErr()).stream()
-                .anyMatch(s -> s.matches(SQUEUE_JOB_ID_ERROR_PATTERN));
-    }
-
     /**
      * This method creates the structure of the executed job deletion command based on the passed options.
      *
@@ -305,5 +262,17 @@ public class SlurmJobProvider implements JobProvider {
         }
         return ListUtils.emptyIfNull(filterJobs(jobFilter).getElements()).stream()
                 .collect(Collectors.toMap(Job::getId, Job::getOwner));
+    }
+
+    private boolean checkParallelExecutionOptions(final ParallelExecutionOptions parallelExecutionOptions) {
+        return parallelExecutionOptions != null
+                && (isNotGreaterThanZero(parallelExecutionOptions.getNumTasks())
+                || isNotGreaterThanZero(parallelExecutionOptions.getNodes())
+                || isNotGreaterThanZero(parallelExecutionOptions.getCpusPerTask())
+                || isNotGreaterThanZero(parallelExecutionOptions.getNumTasksPerNode()));
+    }
+
+    private boolean isNotGreaterThanZero(final int intToCheck) {
+        return intToCheck < 1;
     }
 }

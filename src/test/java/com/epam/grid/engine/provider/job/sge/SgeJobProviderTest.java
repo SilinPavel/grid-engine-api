@@ -31,6 +31,7 @@ import com.epam.grid.engine.entity.job.Job;
 import com.epam.grid.engine.entity.job.JobOptions;
 import com.epam.grid.engine.entity.job.JobState;
 import com.epam.grid.engine.entity.job.ParallelEnvOptions;
+import com.epam.grid.engine.entity.job.ParallelExecutionOptions;
 import com.epam.grid.engine.exception.GridEngineException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
@@ -51,7 +52,6 @@ import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.EMPTY_STR
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.PENDING_STRING;
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.RUNNING_STRING;
 import static com.epam.grid.engine.provider.utils.sge.TestSgeConstants.TYPE_XML;
-import static org.mockito.Mockito.doReturn;
 
 @SpringBootTest(properties = {"grid.engine.type=SGE"})
 public class SgeJobProviderTest {
@@ -83,6 +83,7 @@ public class SgeJobProviderTest {
     private static final String SOME_RUNNING_STATUS_CODE = "r";
     private static final String SOME_WRONG_STATUS_CODE = "lol";
     private static final String SOME_QUEUE_NAME = "test_queue";
+    private static final String SOME_JOB_LOG_DIRECTORY_PATH = "/mnt/logs";
 
     private static final String SOME_JOB_NAME_1 = "someName";
     private static final String SOME_JOB_NAME_2 = "favoriteJob";
@@ -212,12 +213,6 @@ public class SgeJobProviderTest {
         Assertions.assertThrows(GridEngineException.class, () -> sgeJobProvider.filterJobs(jobFilter));
     }
 
-    @Test
-    public void shouldThrowWhenPassJobOptionsWithoutCommandDuringJobSubmitting() {
-        final JobOptions jobOptions = JobOptions.builder().command(EMPTY_STRING).build();
-        Assertions.assertThrows(GridEngineException.class, () -> sgeJobProvider.runJob(jobOptions));
-    }
-
     @ParameterizedTest
     @MethodSource("provideInvalidPeOptions")
     public void shouldThrowWhenPassWrongPeOptionsDuringJobSubmitting(final String peName,
@@ -226,7 +221,8 @@ public class SgeJobProviderTest {
                 .command(JOB_COMMAND)
                 .parallelEnvOptions(new ParallelEnvOptions(peName, peMin, peMax))
                 .build();
-        Assertions.assertThrows(GridEngineException.class, () -> sgeJobProvider.runJob(jobOptions));
+        Assertions.assertThrows(GridEngineException.class,
+                () -> sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
     }
 
     static Stream<Arguments> provideInvalidPeOptions() {
@@ -245,7 +241,8 @@ public class SgeJobProviderTest {
     public void shouldThrowWhenBadCommandResultDuringJobSubmitting(final CommandResult commandResult) {
         final JobOptions jobOptions = JobOptions.builder().command(JOB_COMMAND).build();
         mockCommandCompilation(QSUB, commandResult, QSUB, JOB_COMMAND);
-        Assertions.assertThrows(GridEngineException.class, () -> sgeJobProvider.runJob(jobOptions));
+        Assertions.assertThrows(GridEngineException.class,
+                () -> sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
     }
 
     static Stream<Arguments> provideBadCommandResultForJobSubmitting() {
@@ -268,7 +265,17 @@ public class SgeJobProviderTest {
 
         final CommandResult commandResult = new CommandResult(List.of(JOB_SUBMITTED_STDOUT), 0, EMPTY_LIST);
         mockCommandCompilation(QSUB, commandResult, QSUB, JOB_COMMAND);
-        Assertions.assertEquals(expectedJob, sgeJobProvider.runJob(jobOptions));
+        Assertions.assertEquals(expectedJob, sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
+    }
+
+    @Test
+    public void shouldThrowExceptionBecauseParallelExecOptionsAreUsed() {
+        final JobOptions jobOptions = JobOptions.builder()
+                .command(JOB_COMMAND)
+                .parallelExecutionOptions(new ParallelExecutionOptions())
+                .build();
+        Assertions.assertThrows(UnsupportedOperationException.class,
+                () -> sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
     }
 
     private static Job runningJobTemplate() {
@@ -306,10 +313,9 @@ public class SgeJobProviderTest {
 
     private void mockCommandCompilation(final String command, final CommandResult commandResult,
                                         final String... compiledArray) {
-        doReturn(compiledArray).when(commandCompiler).compileCommand(Mockito.eq(CommandType.SGE),
-                Mockito.matches(command),
-                Mockito.any());
-        doReturn(commandResult).when(mockCmdExecutor).execute(compiledArray);
+        Mockito.doReturn(compiledArray).when(commandCompiler).compileCommand(Mockito.eq(CommandType.SGE),
+                Mockito.matches(command), Mockito.any());
+        Mockito.doReturn(commandResult).when(mockCmdExecutor).execute(compiledArray);
     }
 
     @ParameterizedTest
@@ -337,20 +343,6 @@ public class SgeJobProviderTest {
                 Arguments.of(null, USER_NAME, List.of(SOME_JOB_ID_2)),
                 Arguments.of(USER_NAME, USER_NAME, List.of(SOME_JOB_ID_1, SOME_JOB_ID_2))
         );
-    }
-
-    @ParameterizedTest
-    @MethodSource("provideWrongDeleteRequests")
-    public void shouldThrowDuringDeletionWhenNotValidRequest(final DeleteJobFilter deleteJobFilter) {
-        Assertions.assertThrows(GridEngineException.class, () -> sgeJobProvider.deleteJob(deleteJobFilter));
-    }
-
-    static Stream<Arguments> provideWrongDeleteRequests() {
-        return Stream.of(
-                        new DeleteJobFilter(false, List.of(0L), USER_NAME),
-                        new DeleteJobFilter(true, null, EMPTY_STRING),
-                        new DeleteJobFilter(false, null, null))
-                .map(Arguments::of);
     }
 
     @Test
