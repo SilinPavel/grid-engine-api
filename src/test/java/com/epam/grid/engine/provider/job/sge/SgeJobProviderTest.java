@@ -203,7 +203,7 @@ public class SgeJobProviderTest {
     }
 
     @Test
-    public void shouldTrowWhenCommandResultFiltrationWithErrorCode() {
+    public void shouldThrowWhenCommandResultFiltrationWithErrorCode() {
         final CommandResult commandResult = new CommandResult(EMPTY_LIST, 1, EMPTY_LIST);
         mockCommandCompilation(QSTAT_COMMAND, commandResult, QSTAT_COMMAND, TYPE_XML);
         Assertions.assertThrows(GridEngineException.class, () -> sgeJobProvider.filterJobs(new JobFilter()));
@@ -280,46 +280,6 @@ public class SgeJobProviderTest {
                 () -> sgeJobProvider.runJob(jobOptions, SOME_JOB_LOG_DIRECTORY_PATH));
     }
 
-    private static Job runningJobTemplate() {
-        return Job.builder()
-                .id(SOME_JOB_ID_1)
-                .name(SOME_JOB_NAME_1)
-                .priority(SOME_JOB_PRIORITY)
-                .owner(USER_NAME)
-                .queueName(SOME_QUEUE_NAME)
-                .submissionTime(LocalDateTime.parse(SOME_JOB_STARTING_TIME_1))
-                .slots(SOME_SLOTS_AMOUNT)
-                .state(JobState.builder()
-                        .category(JobState.Category.RUNNING)
-                        .state(RUNNING_STRING)
-                        .stateCode(SOME_RUNNING_STATUS_CODE).build())
-                .build();
-    }
-
-    private static Job pendingJobTemplate() {
-        return Job.builder()
-                .id(SOME_JOB_ID_2)
-                .name(SOME_JOB_NAME_2)
-                .priority(SOME_JOB_PRIORITY)
-                .owner(USER_NAME)
-                .queueName(SOME_QUEUE_NAME)
-                .submissionTime(LocalDateTime.parse(SOME_JOB_STARTING_TIME_2))
-                .slots(SOME_SLOTS_AMOUNT)
-                .state(JobState.builder()
-                        .category(JobState.Category.PENDING)
-                        .state(PENDING_STRING)
-                        .stateCode(SOME_PENDING_STATUS_CODE)
-                        .build())
-                .build();
-    }
-
-    private void mockCommandCompilation(final String command, final CommandResult commandResult,
-                                        final String... compiledArray) {
-        Mockito.doReturn(compiledArray).when(commandCompiler).compileCommand(Mockito.eq(CommandType.SGE),
-                Mockito.matches(command), Mockito.any());
-        Mockito.doReturn(commandResult).when(mockCmdExecutor).execute(compiledArray);
-    }
-
     @ParameterizedTest
     @MethodSource("provideValidCasesForJobDeleting")
     public void shouldReturnCorrectDeletedJobInfo(final String requestUser, final String expectedUser,
@@ -386,5 +346,45 @@ public class SgeJobProviderTest {
         final Listing<DeletedJobInfo> result = sgeJobProvider.deleteJob(jobFilter);
         Assertions.assertEquals(1, result.getElements().size());
         Assertions.assertEquals(new DeletedJobInfo(SOME_JOB_ID_2, USER_NAME), result.getElements().get(0));
+    }
+
+    private static Job runningJobTemplate() {
+        return Job.builder()
+                .id(SOME_JOB_ID_1)
+                .name(SOME_JOB_NAME_1)
+                .priority(SOME_JOB_PRIORITY)
+                .owner(USER_NAME)
+                .queueName(SOME_QUEUE_NAME)
+                .submissionTime(LocalDateTime.parse(SOME_JOB_STARTING_TIME_1))
+                .slots(SOME_SLOTS_AMOUNT)
+                .state(JobState.builder()
+                        .category(JobState.Category.RUNNING)
+                        .state(RUNNING_STRING)
+                        .stateCode(SOME_RUNNING_STATUS_CODE).build())
+                .build();
+    }
+
+    private static Job pendingJobTemplate() {
+        return Job.builder()
+                .id(SOME_JOB_ID_2)
+                .name(SOME_JOB_NAME_2)
+                .priority(SOME_JOB_PRIORITY)
+                .owner(USER_NAME)
+                .queueName(SOME_QUEUE_NAME)
+                .submissionTime(LocalDateTime.parse(SOME_JOB_STARTING_TIME_2))
+                .slots(SOME_SLOTS_AMOUNT)
+                .state(JobState.builder()
+                        .category(JobState.Category.PENDING)
+                        .state(PENDING_STRING)
+                        .stateCode(SOME_PENDING_STATUS_CODE)
+                        .build())
+                .build();
+    }
+
+    private void mockCommandCompilation(final String command, final CommandResult commandResult,
+                                        final String... compiledArray) {
+        Mockito.doReturn(compiledArray).when(commandCompiler).compileCommand(Mockito.eq(CommandType.SGE),
+                Mockito.matches(command), Mockito.any());
+        Mockito.doReturn(commandResult).when(mockCmdExecutor).execute(compiledArray);
     }
 }

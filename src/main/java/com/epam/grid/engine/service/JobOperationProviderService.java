@@ -98,8 +98,7 @@ public class JobOperationProviderService {
                         + "Either at least one `id` or `user` must be specified to delete jobs!", deleteJobFilter));
             }
             deleteJobFilter.getIds().stream()
-                    .map(id -> id != null ? id : -1L)
-                    .filter(id -> id <= 0)
+                    .filter(id -> id == null || id <= 0)
                     .findFirst()
                     .ifPresent(id -> {
                         throw new GridEngineException(HttpStatus.BAD_REQUEST, String.format("At least one `id` is "
