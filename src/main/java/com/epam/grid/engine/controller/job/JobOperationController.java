@@ -103,8 +103,8 @@ public class JobOperationController extends AbstractRestController {
     @DeleteMapping
     @ResponseStatus(HttpStatus.OK)
     @ApiOperation(value = "Delete job",
-            notes = "Tries to delete one or more jobs by username, id or job name. If"
-                    + " successful, returns the message and information about deleted job"
+            notes = "Tries to delete one or more jobs by username or ids. If successful,"
+                    + " returns the message and information about deleted jobs"
     )
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = SUCCESSFULLY_DELETED),
