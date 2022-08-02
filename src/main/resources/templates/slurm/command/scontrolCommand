@@ -1,0 +1,13 @@
+scontrol [(${command})]
+[# th:if="${name != null}"]
+    PartitionName=[(${name})]
+[/]
+[# th:if="${allowedUserGroups != null}"]
+    AllowGroups=[(${allowedUserGroups})]
+[/]
+[# th:if="${hostList != null}"]
+    Nodes=[(${hostList})]
+[/]
+[# th:if="${ownerList != null}"]
+
+[/]
