@@ -174,6 +174,7 @@ public class SgeJobProvider implements JobProvider {
 
     /**
      * Deletes jobs being performed according to the specified parameters.
+     * <p>note: the {@link DeleteJobFilter} argument must contain only an owner's name or list of job ids.</p>
      *
      * @param deleteJobFilter Search parameters for the job being deleted.
      * @return Information about deleted jobs.
@@ -317,9 +318,10 @@ public class SgeJobProvider implements JobProvider {
 
     private Map<Long, String> getJobOwners(final DeleteJobFilter deleteJobFilter) {
         final JobFilter jobFilter = new JobFilter();
-        jobFilter.setIds(ListUtils.emptyIfNull(deleteJobFilter.getIds()));
         if (StringUtils.hasText(deleteJobFilter.getUser())) {
             jobFilter.setOwners(List.of(deleteJobFilter.getUser()));
+        } else {
+            jobFilter.setIds(deleteJobFilter.getIds());
         }
         return ListUtils.emptyIfNull(filterJobs(jobFilter).getElements()).stream()
                 .collect(Collectors.toMap(Job::getId, Job::getOwner));

@@ -33,6 +33,7 @@ import com.epam.grid.engine.provider.log.JobLogProvider;
 import com.epam.grid.engine.provider.utils.DirectoryPathUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -87,24 +88,21 @@ public class JobOperationProviderService {
      * @return Information about deleted job.
      */
     public Listing<DeletedJobInfo> deleteJob(final DeleteJobFilter deleteJobFilter) {
-        if (StringUtils.hasText(deleteJobFilter.getUser())) {
-            if (CollectionUtils.isNotEmpty(deleteJobFilter.getIds())) {
-                throw new GridEngineException(HttpStatus.BAD_REQUEST, String.format("Incorrect filling in %s. "
-                        + "Only 'ids' or 'name' can be specified for jobs removal!", deleteJobFilter));
-            }
-        } else {
-            if (CollectionUtils.isEmpty(deleteJobFilter.getIds())) {
-                throw new GridEngineException(HttpStatus.BAD_REQUEST, String.format("Incorrect filling in %s. "
-                        + "Either at least one `id` or `user` must be specified to delete jobs!", deleteJobFilter));
-            }
-            deleteJobFilter.getIds().stream()
-                    .filter(id -> id == null || id <= 0)
-                    .findFirst()
-                    .ifPresent(id -> {
-                        throw new GridEngineException(HttpStatus.BAD_REQUEST, String.format("At least one `id` is "
-                                        + "incorrect specified in %s for job removal!", deleteJobFilter));
-                    });
+        if (!StringUtils.hasText(deleteJobFilter.getUser()) && CollectionUtils.isEmpty(deleteJobFilter.getIds())) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, String.format("Incorrect filling in %s. "
+                    + "Either at least one `id` or `user` must be specified to delete jobs!", deleteJobFilter));
         }
+        if (StringUtils.hasText(deleteJobFilter.getUser()) && CollectionUtils.isNotEmpty(deleteJobFilter.getIds())) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, String.format("Incorrect filling in %s. "
+                    + "Only 'ids' or 'name' can be specified for jobs removal!", deleteJobFilter));
+        }
+        ListUtils.emptyIfNull(deleteJobFilter.getIds()).stream()
+                .filter(id -> id == null || id <= 0)
+                .findFirst()
+                .ifPresent(id -> {
+                    throw new GridEngineException(HttpStatus.BAD_REQUEST, String.format("At least one `id` is "
+                                    + "incorrect specified in %s for job removal!", deleteJobFilter));
+                });
         return jobProvider.deleteJob(deleteJobFilter);
     }
 
