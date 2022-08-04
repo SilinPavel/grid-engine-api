@@ -8,6 +8,3 @@ scontrol [(${command})]
 [# th:if="${hostList != null}"]
     Nodes=[(${hostList})]
 [/]
-[# th:if="${ownerList != null}"]
-
-[/]
