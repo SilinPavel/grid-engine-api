@@ -1,6 +1,6 @@
 scontrol [(${command})]
-[# th:if="${name != null}"]
-    PartitionName=[(${name})]
+[# th:if="${partitionName != null}"]
+    PartitionName=[(${partitionName})]
 [/]
 [# th:if="${allowedUserGroups != null}"]
     AllowGroups=[(${allowedUserGroups})]
