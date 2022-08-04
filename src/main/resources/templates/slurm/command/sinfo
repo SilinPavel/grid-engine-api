@@ -1,0 +1,5 @@
+sinfo
+[# th:if="${partitionName != null}"]
+    --partition=[(${partitionName})]
+[/]
+-h -o %all
