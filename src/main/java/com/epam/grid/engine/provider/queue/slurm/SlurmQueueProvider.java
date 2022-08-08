@@ -36,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 
@@ -125,7 +126,8 @@ public class SlurmQueueProvider implements QueueProvider {
         final String updateName = updateRequest.getName();
         final List<String> updateHostList = updateRequest.getHostList();
         final List<String> updateUserGroups = updateRequest.getAllowedUserGroups();
-        if (!StringUtils.hasText(updateName) || updateHostList.isEmpty() || updateUserGroups.isEmpty()) {
+        if (!StringUtils.hasText(updateName) || CollectionUtils.isEmpty(updateHostList)
+                || CollectionUtils.isEmpty(updateUserGroups)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Name, hostList and allowedUserGroups should be "
                     + "specified for successful partition update");
         }
