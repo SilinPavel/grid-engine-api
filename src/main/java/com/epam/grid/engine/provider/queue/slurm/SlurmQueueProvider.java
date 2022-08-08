@@ -24,6 +24,7 @@ import com.epam.grid.engine.cmd.SimpleCmdExecutor;
 import com.epam.grid.engine.entity.CommandResult;
 import com.epam.grid.engine.entity.CommandType;
 import com.epam.grid.engine.entity.QueueFilter;
+import com.epam.grid.engine.entity.queue.slurm.SlurmQueue;
 import com.epam.grid.engine.entity.queue.Queue;
 import com.epam.grid.engine.entity.queue.QueueVO;
 import com.epam.grid.engine.entity.queue.SlotsDescription;
@@ -35,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 
 import java.util.ArrayList;
@@ -74,11 +76,12 @@ public class SlurmQueueProvider implements QueueProvider {
     private static final String HYPHEN_SIGN = "-";
 
     private static final Pattern NODES_RANGE_REGEX = Pattern.compile("[a-zA-Z]+\\[\\d+-\\d+]");
-    private static final int SCONTROL_OUPUT_SIZE = 42;
-    private static final int SCONTROL_OUPUT_PARTNAME_INDEX = 33;
-    private static final int SCONTROL_OUPUT_NODES_INDEX = 31;
-    private static final int SCONTROL_OUPUT_USERGROUPS_INDEX = 6;
+    private static final int SCONTROL_OUPUT_SIZE = 4;
+    private static final int SCONTROL_OUPUT_PARTNAME_INDEX = 0;
+    private static final int SCONTROL_OUPUT_NODES_INDEX = 1;
     private static final int SCONTROL_OUPUT_CPUS_INDEX = 2;
+    private static final int SCONTROL_OUPUT_USERGROUPS_INDEX = 3;
+    private static final int CPUS_PER_NODE_BY_DEFAULT = 1;
 
     private final SimpleCmdExecutor simpleCmdExecutor;
 
@@ -104,11 +107,14 @@ public class SlurmQueueProvider implements QueueProvider {
         final CommandResult result = simpleCmdExecutor.execute(commandCompiler.compileCommand(getProviderType(),
                 SCONTROL_COMMAND, context));
         checkIsResultIsCorrect(result);
+        final List<String> decryptedRegisterNodes = decryptGroupOfNodes(registrationRequest.getHostList());
+        final Map<String, Integer> slotDescription = getNodesDescription(decryptedRegisterNodes,
+                CPUS_PER_NODE_BY_DEFAULT);
         return Queue.builder()
                 .name(registrationRequest.getName())
-                .hostList(registrationRequest.getHostList())
+                .hostList(decryptedRegisterNodes)
                 .allowedUserGroups(registrationRequest.getAllowedUserGroups())
-                .slots(new SlotsDescription(2, Collections.emptyMap()))
+                .slots(new SlotsDescription(decryptedRegisterNodes.size(), slotDescription))
                 .build();
     }
 
@@ -119,9 +125,9 @@ public class SlurmQueueProvider implements QueueProvider {
         final String updateName = updateRequest.getName();
         final List<String> updateHostList = updateRequest.getHostList();
         final List<String> updateUserGroups = updateRequest.getAllowedUserGroups();
-        if (updateName == null || updateHostList == null || updateUserGroups == null) {
-            throw new UnsupportedOperationException("Name, hostList and allowedUserGroups should be specified for "
-                    + "successful partition update");
+        if (!StringUtils.hasText(updateName) || updateHostList.isEmpty() || updateUserGroups.isEmpty()) {
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Name, hostList and allowedUserGroups should be "
+                    + "specified for successful partition update");
         }
 
         final Context context = createContextWithUpdatePartitionName(updateName);
@@ -129,11 +135,11 @@ public class SlurmQueueProvider implements QueueProvider {
                 SINFO_COMMAND, context));
         checkIfExecutionResultIsEmpty(sinfoResult);
 
-        final List<List<String>> partitionData = getNodesData(sinfoResult.getStdOut());
+        final SlurmQueue partitionData = getPartitionData(sinfoResult.getStdOut().get(0));
 
-        final List<String> currentNodesDecrypted = getNodesFromPartitionDataAndDecrypt(partitionData);
-        final List<String> userGroups = getUserGroupsFromPartitionData(partitionData);
-        final int cpus = getCpusFromPartitionData(partitionData);
+        final List<String> currentNodesDecrypted = partitionData.getNodelist();
+        final List<String> userGroups = partitionData.getGroups();
+        final int cpus = partitionData.getCpus();
 
         final List<String> updateHostListDecrypted = decryptGroupOfNodes(updateHostList);
         sortList(updateUserGroups);
@@ -142,17 +148,20 @@ public class SlurmQueueProvider implements QueueProvider {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "New partition properties and the current one are "
                     + "equal");
         }
-        fillContextWithDateToUpdate(context, updateUserGroups, updateHostListDecrypted);
+        fillContextWithDataToUpdate(context, updateUserGroups, updateHostListDecrypted);
 
         final CommandResult result = simpleCmdExecutor.execute(commandCompiler.compileCommand(getProviderType(),
                 SCONTROL_COMMAND, context));
         checkIsResultIsCorrect(result);
 
+        final Map<String, Integer> slotDescription = getNodesDescription(updateHostListDecrypted,
+                CPUS_PER_NODE_BY_DEFAULT);
+
         return Queue.builder()
                 .name(updateName)
                 .hostList(updateHostListDecrypted)
                 .allowedUserGroups(updateUserGroups)
-                .slots(new SlotsDescription(cpus, Collections.emptyMap()))
+                .slots(new SlotsDescription(cpus, slotDescription))
                 .build();
     }
 
@@ -162,8 +171,8 @@ public class SlurmQueueProvider implements QueueProvider {
                 SINFO_COMMAND, new Context()));
         checkIsResultIsCorrect(result);
 
-        if (result.getStdOut().size() == 0) {
-            return Collections.EMPTY_LIST;
+        if (result.getStdOut().isEmpty()) {
+            return Collections.emptyList();
         }
 
         return fillQueueNameFromOutput(result.getStdOut());
@@ -173,14 +182,14 @@ public class SlurmQueueProvider implements QueueProvider {
     public List<Queue> listQueues(final QueueFilter queueFilter) {
         final Context context = new Context();
         if (queueFilter.getQueues() != null) {
-            context.setVariable(SCONTROL_PARTITION_NAME, String.join(COMMA, queueFilter.getQueues()));
+            context.setVariable(SCONTROL_PARTITION_NAME, queueFilter.getQueues());
         }
         final CommandResult result = simpleCmdExecutor.execute(commandCompiler.compileCommand(getProviderType(),
                 SINFO_COMMAND, context));
         checkIsResultIsCorrect(result);
 
-        if (result.getStdOut().size() == 0) {
-            return Collections.EMPTY_LIST;
+        if (result.getStdOut().isEmpty()) {
+            return Collections.emptyList();
         }
 
         return fillQueueData(result.getStdOut());
@@ -189,7 +198,7 @@ public class SlurmQueueProvider implements QueueProvider {
     @Override
     public Queue deleteQueues(final String queueName) {
         if (queueName == null) {
-            throw new UnsupportedOperationException("Partition name for deletion should be specified");
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Partition name for deletion should be specified");
         }
         final Context context = new Context();
         context.setVariable(SCONTROL_ACTION, SCONTROL_DELETE_COMMAND);
@@ -202,39 +211,13 @@ public class SlurmQueueProvider implements QueueProvider {
                 .build();
     }
 
-    private List<String> getNodesFromPartitionDataAndDecrypt(final List<List<String>> partitionData) {
-        final List<String> nodesData = partitionData.stream()
-                .map(nodeData -> nodeData.get(1))
-                .distinct()
-                .sorted(String::compareTo)
-                .collect(Collectors.toList());
-        return decryptGroupOfNodes(nodesData);
-    }
-
-    private List<String> getUserGroupsFromPartitionData(final List<List<String>> partitionData) {
-        return partitionData.stream()
-                .map(nodeData -> nodeData.get(2))
-                .distinct()
-                .map(String::toUpperCase)
-                .sorted(String::compareTo)
-                .collect(Collectors.toList());
-    }
-
-    private int getCpusFromPartitionData(final List<List<String>> partitionData) {
-        return partitionData.stream()
-                .mapToInt(nodeData -> nodeData.get(3) != null
-                        ? Integer.parseInt(nodeData.get(3))
-                        : 0)
-                .sum();
-    }
-
     private void sortList(final List<String> list) {
         list.sort(String::compareTo);
     }
 
-    private List<String> decryptGroupOfNodes(final List<String> updateHostList) {
+    private List<String> decryptGroupOfNodes(final List<String> hostList) {
         final List<String> decryptedNodes = new ArrayList<>();
-        updateHostList
+        hostList
                 .forEach(host -> {
                     final Matcher matcher = NODES_RANGE_REGEX.matcher(host);
                     if (matcher.find()) {
@@ -253,11 +236,11 @@ public class SlurmQueueProvider implements QueueProvider {
         }
     }
 
-    private void fillContextWithDateToUpdate(final Context context, final List<String> updateUserGroups,
+    private void fillContextWithDataToUpdate(final Context context, final List<String> updateUserGroups,
                                              final List<String> updateHostList) {
         context.setVariable(SCONTROL_ACTION, SCONTROL_UPDATE_COMMAND);
-        context.setVariable(SCONTROL_USER_GROUPS, String.join(COMMA, updateUserGroups));
-        context.setVariable(SCONTROL_HOSTS, String.join(COMMA, updateHostList));
+        context.setVariable(SCONTROL_USER_GROUPS, updateUserGroups);
+        context.setVariable(SCONTROL_HOSTS, updateHostList);
     }
 
     private Context createContextWithUpdatePartitionName(final String updateName) {
@@ -274,33 +257,51 @@ public class SlurmQueueProvider implements QueueProvider {
         }
     }
 
-    private List<List<String>> getNodesData(final List<String> resultOutput) {
-        return resultOutput.stream()
-                .map(nodeData -> {
-                    final String[] nodeDataArray = nodeData.split(STANDARD_SLURM_DELIMETER);
-                    if (nodeDataArray.length != SCONTROL_OUPUT_SIZE) {
-                        throw new GridEngineException(HttpStatus.NOT_FOUND, "Node data is inconsistent: waiting for "
-                                + SCONTROL_OUPUT_SIZE + " fields, but " + nodeDataArray.length + " were fetched.");
-                    }
-                    return nodeDataArray;
-                })
-                .map(nodeDataArray -> List.of(
-                        nodeDataArray[SCONTROL_OUPUT_PARTNAME_INDEX],
-                        nodeDataArray[SCONTROL_OUPUT_NODES_INDEX],
-                        nodeDataArray[SCONTROL_OUPUT_USERGROUPS_INDEX],
-                        nodeDataArray[SCONTROL_OUPUT_CPUS_INDEX]
-                ))
-                .collect(Collectors.toList());
+    private SlurmQueue getPartitionData(final String resultOutputString) {
+        final String[] nodeDataArray = resultOutputString.split(STANDARD_SLURM_DELIMETER);
+        if (nodeDataArray.length != SCONTROL_OUPUT_SIZE) {
+            throw new GridEngineException(HttpStatus.NOT_FOUND, "Node data is inconsistent: waiting for "
+                    + SCONTROL_OUPUT_SIZE + " fields, but " + nodeDataArray.length + " were fetched.");
+        }
+
+        final List<String> nodeList = new ArrayList<>();
+        final String nodeListString = nodeDataArray[SCONTROL_OUPUT_NODES_INDEX];
+        if (!nodeListString.isEmpty()) {
+            if (nodeListString.contains(COMMA)) {
+                nodeList.addAll(decryptGroupOfNodes(Arrays.asList(nodeListString.split(COMMA))));
+            } else {
+                nodeList.addAll(decryptGroupOfNodes(List.of(nodeListString)));
+            }
+        }
+
+        final int cpusPerNode = Integer.parseInt(nodeDataArray[SCONTROL_OUPUT_CPUS_INDEX]);
+
+        final List<String> userGroups = new ArrayList<>();
+        final String userListString = nodeDataArray[SCONTROL_OUPUT_USERGROUPS_INDEX];
+        if (!userListString.isEmpty()) {
+            if (userListString.contains(COMMA)) {
+                userGroups.addAll(Arrays.asList(userListString.split(COMMA)));
+            } else {
+                userGroups.add(userListString);
+            }
+        }
+
+        return SlurmQueue.builder()
+                .partition(nodeDataArray[SCONTROL_OUPUT_PARTNAME_INDEX])
+                .nodelist(nodeList)
+                .cpus(cpusPerNode)
+                .groups(userGroups)
+                .build();
     }
 
     private List<Queue> fillQueueNameFromOutput(final List<String> resultOutput) {
         return resultOutput.stream()
-                .map(nodeData -> {
-                    final String[] nodeDataArray = nodeData.split(STANDARD_SLURM_DELIMETER);
-                    if (nodeDataArray.length != SCONTROL_OUPUT_SIZE) {
-                        throw new GridEngineException(HttpStatus.NOT_FOUND, "Node ouput data is incorrect");
+                .map(partitionData -> {
+                    final String[] partitionDataArray = partitionData.split(STANDARD_SLURM_DELIMETER);
+                    if (partitionDataArray.length != SCONTROL_OUPUT_SIZE) {
+                        throw new GridEngineException(HttpStatus.NOT_FOUND, "Partition output data is incorrect");
                     }
-                    return nodeDataArray[SCONTROL_OUPUT_PARTNAME_INDEX].trim();
+                    return partitionDataArray[SCONTROL_OUPUT_PARTNAME_INDEX].trim();
                 })
                 .distinct()
                 .map(partitionName -> Queue.builder()
@@ -310,65 +311,42 @@ public class SlurmQueueProvider implements QueueProvider {
     }
 
     private List<Queue> fillQueueData(final List<String> resultOutput) {
-        final List<List<String>> requiredNodeDataList = resultOutput.stream()
-                .map(nodeData -> {
-                    final String[] nodeDataArray = nodeData.split(STANDARD_SLURM_DELIMETER);
-                    if (nodeDataArray.length != SCONTROL_OUPUT_SIZE) {
-                        throw new GridEngineException(HttpStatus.NOT_FOUND, "Node output data is incorrect");
-                    }
-                    return getPartitionDataFromFilteringOutput(nodeDataArray);
-                })
-                .distinct()
+        final List<SlurmQueue> partitionsData = resultOutput.stream()
+                .map(this::getPartitionData)
                 .collect(Collectors.toList());
-        final Map<String, List<String>> partitionsDataMap = groupNodesByPartitions(requiredNodeDataList);
-        return partitionsDataMap.entrySet().stream().map(
-                        partitionDataEntry -> {
-                            final List<String> partitionDataEntryValue = partitionDataEntry.getValue();
-                            return Queue.builder()
-                                    .name(partitionDataEntry.getKey())
-                                    .hostList(List.of(partitionDataEntryValue.get(0).split(COMMA)))
-                                    .allowedUserGroups(List.of(partitionDataEntryValue.get(1).split(COMMA)))
-                                    .slots(new SlotsDescription(Integer.parseInt(partitionDataEntryValue.get(2)),
-                                            Collections.emptyMap()))
-                                    .build();
-                        })
+
+        return partitionsData.stream().map(
+                        partitionData -> Queue.builder()
+                                .name(partitionData.getPartition())
+                                .hostList(partitionData.getNodelist())
+                                .allowedUserGroups(partitionData.getGroups())
+                                .slots(new SlotsDescription(
+                                        partitionData.getCpus(),
+                                        getNodesDescription(partitionData.getNodelist(), partitionData.getCpus())
+                                ))
+                                .build())
                 .collect(Collectors.toList());
     }
 
-    private Map<String, List<String>> groupNodesByPartitions(final List<List<String>> nodesData) {
-        final Map<String, List<String>> partitionsMap = new HashMap<>();
-        nodesData.forEach(nodeData -> {
-            final List<String> currentNodeData = partitionsMap.get(nodeData.get(0));
-            if (currentNodeData != null) {
-                currentNodeData.set(0, currentNodeData.get(0).concat(",").concat(nodeData.get(1).trim()));
-                currentNodeData.set(2, String.valueOf(
-                        Integer.parseInt(currentNodeData.get(2)) + Integer.parseInt(nodeData.get(3)))
+    private Map<String, Integer> getNodesDescription(final List<String> nodes, final int cpus) {
+        if (nodes.isEmpty()) {
+            return new HashMap<>();
+        }
+        return nodes.stream()
+                .collect(Collectors.toMap(
+                        nodeListElem -> nodeListElem,
+                        nodeListElem -> cpus)
                 );
-            } else {
-                partitionsMap.put(nodeData.get(0),
-                        Arrays.asList(nodeData.get(1).trim(), nodeData.get(2), nodeData.get(3)));
-            }
-        });
-        return partitionsMap;
-    }
-
-    private List<String> getPartitionDataFromFilteringOutput(final String[] output) {
-        final List<String> partitionDataList = new ArrayList<>();
-        partitionDataList.add(output[SCONTROL_OUPUT_PARTNAME_INDEX].trim());
-        partitionDataList.add(output[SCONTROL_OUPUT_NODES_INDEX]);
-        partitionDataList.add(output[SCONTROL_OUPUT_USERGROUPS_INDEX]);
-        partitionDataList.add(output[SCONTROL_OUPUT_CPUS_INDEX]);
-        return partitionDataList;
     }
 
     private Context prepareContext(final QueueVO registrationRequest) {
         final Context context = new Context();
         context.setVariable(SCONTROL_ACTION, SCONTROL_CREATE_COMMAND);
         if (registrationRequest.getAllowedUserGroups() != null) {
-            context.setVariable(SCONTROL_USER_GROUPS, String.join(COMMA, registrationRequest.getAllowedUserGroups()));
+            context.setVariable(SCONTROL_USER_GROUPS, registrationRequest.getAllowedUserGroups());
         }
         if (registrationRequest.getHostList() != null) {
-            context.setVariable(SCONTROL_HOSTS, String.join(COMMA, registrationRequest.getHostList()));
+            context.setVariable(SCONTROL_HOSTS, registrationRequest.getHostList());
         }
         context.setVariable(SCONTROL_PARTITION_NAME, registrationRequest.getName());
         return context;
@@ -386,7 +364,7 @@ public class SlurmQueueProvider implements QueueProvider {
 
     private void checkRegistrationRequest(final QueueVO registrationRequest) {
         if (registrationRequest.getName() == null) {
-            throw new UnsupportedOperationException("Partition name option is obligatory");
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Partition name option is obligatory");
         }
         if (registrationRequest.getParallelEnvironmentNames() != null) {
             throw new UnsupportedOperationException("Parallel environment variables cannot be used in Slurm!");

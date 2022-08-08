@@ -64,7 +64,7 @@ public class SlurmQueue {
      * Resource allocations in this partition  are  restricted  to  the named  groups. ALL  indicates  that  all
      * groups  may use this partition.
      */
-    private String groups;
+    private List<String> groups;
 
     /**
      * Minimum and maximum node count that can be allocated to any user job.   A  single  number  indicates

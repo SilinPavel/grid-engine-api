@@ -67,6 +67,8 @@ RUN set -x \
         /mnt/grid-engine-api \
         /mnt/grid-engine-api/logs \
         /data \
+    && chmod -R 755 /mnt/grid-engine-api  \
+    && chown -R slurm:slurm /mnt/grid-engine-api \
     && ln -s /mnt/grid-engine-api/logs /var/log/slurm \
     && touch /var/lib/slurmd/node_state \
         /var/lib/slurmd/front_end_state \
@@ -85,6 +87,9 @@ COPY ./docker/slurm/slurmdbd.conf /etc/slurm/slurmdbd.conf
 
 COPY ./docker/slurm/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+COPY ./test.sh /data/test.sh
+COPY ./test2.sh /data/test2.sh
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["slurmdbd"]
