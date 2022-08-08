@@ -43,7 +43,6 @@ import org.thymeleaf.context.Context;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -173,10 +172,6 @@ public class SlurmQueueProvider implements QueueProvider {
                 SINFO_COMMAND, new Context()));
         checkIsResultIsCorrect(result);
 
-        if (result.getStdOut().isEmpty()) {
-            return Collections.emptyList();
-        }
-
         return fillQueueNameFromOutput(result.getStdOut());
     }
 
@@ -189,10 +184,6 @@ public class SlurmQueueProvider implements QueueProvider {
         final CommandResult result = simpleCmdExecutor.execute(commandCompiler.compileCommand(getProviderType(),
                 SINFO_COMMAND, context));
         checkIsResultIsCorrect(result);
-
-        if (result.getStdOut().isEmpty()) {
-            return Collections.emptyList();
-        }
 
         return fillQueueData(result.getStdOut());
     }
@@ -323,7 +314,7 @@ public class SlurmQueueProvider implements QueueProvider {
                                 .hostList(partitionData.getNodelist())
                                 .allowedUserGroups(partitionData.getGroups())
                                 .slots(new SlotsDescription(
-                                        partitionData.getCpus(),
+                                        partitionData.getCpus() * partitionData.getNodelist().size(),
                                         getNodesDescription(partitionData.getNodelist(), partitionData.getCpus())
                                 ))
                                 .build())
@@ -369,10 +360,11 @@ public class SlurmQueueProvider implements QueueProvider {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Partition name option is obligatory");
         }
         if (registrationRequest.getParallelEnvironmentNames() != null) {
-            throw new UnsupportedOperationException("Parallel environment variables cannot be used in Slurm!");
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Parallel environment variables cannot be used in "
+                    + "Slurm!");
         }
         if (registrationRequest.getOwnerList() != null) {
-            throw new UnsupportedOperationException("Owners cannot be set for partitions in slurm");
+            throw new GridEngineException(HttpStatus.BAD_REQUEST, "Owners cannot be set for partitions in slurm");
         }
     }
 }
