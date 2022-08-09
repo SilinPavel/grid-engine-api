@@ -37,17 +37,16 @@ public class SlurmQueueProviderTest {
             "partition2|worker2|1|slurm");
     private static final List<String> validStdoutUpdatedPartition = List.of("updatingPartitionName|worker1,worker2|"
             + "2|ALL");
-    private static final String[] CREATE_COMMAND_PATTERN = new String[]{"scontrol CREATE PartitionName=newPartition"
-            + "AllowGroups=ALL Nodes=worker1"};
-    private static final String[] LIST_COMMAND_PATTERN = new String[]{"sinfo -h -o \"%R|%N|%c|%g\""};
-    private static final String[] DELETE_COMMAND_PATTERN = new String[]{"scontrol DELETE "
-            + "PartitionName=deletedPartiiton"};
+
     private static final String[] UPDATE_COMMAND_PATTERN = new String[]{"scontrol UPDATE "
             + "PartitionName=updatingPartitionName AllowGroups=ALL Nodes=worker1,worker2"};
     private static final String[] SINFO_COMMAND_PATTERN = new String[]{"sinfo --partition=updatingPartitionName "
             + " -h -o \"%R|%N|%c|%g\""};
     private static final String SCONTROL_COMMAND_TEMPLATE = "scontrolCommand";
     private static final String SINFO_COMMAND_TEMPLATE = "sinfo";
+    private static final String UPDATING_PARTITION_NAME = "updatingPartition";
+    private static final String NEW_PARTITION_NAME = "newPartition";
+    private static final String DELETED_PARTITION_NAME = "deletedPartition";
     private static final List<String> ownerList = List.of("root", "slurm");
     private static final List<String> parallelEnvList = List.of("someVar1", "someVar1");
     private static final List<String> nodeListOneNode = List.of("worker1");
@@ -82,18 +81,16 @@ public class SlurmQueueProviderTest {
         final CommandResult creationResult = CommandResult.builder()
                 .stdOut(validStdout)
                 .stdErr(Collections.emptyList())
-                .exitCode(0).build();
-        doReturn(CREATE_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
-                Mockito.matches(SCONTROL_COMMAND_TEMPLATE), Mockito.any());
-        doReturn(creationResult).when(mockCmdExecutor).execute(CREATE_COMMAND_PATTERN);
+                .build();
+        doReturn(creationResult).when(mockCmdExecutor).execute(Mockito.any());
 
         final QueueVO correctRequest = QueueVO.builder()
-                .name("newPartition")
+                .name(NEW_PARTITION_NAME)
                 .hostList(nodeListOneNode)
                 .allowedUserGroups(groupsList)
                 .build();
         final Queue createdPartitionEntity = Queue.builder()
-                .name("newPartition")
+                .name(NEW_PARTITION_NAME)
                 .allowedUserGroups(groupsList)
                 .hostList(nodeListOneNode)
                 .slots(new SlotsDescription(1, slotDescriptionOneNode))
@@ -107,10 +104,8 @@ public class SlurmQueueProviderTest {
         final CommandResult sinfoResult = CommandResult.builder()
                 .stdOut(validStdoutUpdatedPartition)
                 .stdErr(Collections.emptyList())
-                .exitCode(0).build();
-        doReturn(SINFO_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
-                Mockito.matches(SINFO_COMMAND_TEMPLATE), Mockito.any());
-        doReturn(sinfoResult).when(mockCmdExecutor).execute(SINFO_COMMAND_PATTERN);
+                .build();
+        doReturn(sinfoResult).when(mockCmdExecutor).execute(Mockito.any());
 
         final QueueVO updateRequest = QueueVO.builder()
                 .name("updatingPartitionName")
@@ -128,10 +123,8 @@ public class SlurmQueueProviderTest {
         final CommandResult sinfoEmptyResult = CommandResult.builder()
                 .stdOut(Collections.emptyList())
                 .stdErr(Collections.emptyList())
-                .exitCode(0).build();
-        doReturn(SINFO_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
-                Mockito.matches(SINFO_COMMAND_TEMPLATE), Mockito.any());
-        doReturn(sinfoEmptyResult).when(mockCmdExecutor).execute(SINFO_COMMAND_PATTERN);
+                .build();
+        doReturn(sinfoEmptyResult).when(mockCmdExecutor).execute(Mockito.any());
         final QueueVO updateRequestWithIncorrectPartitionName = QueueVO.builder()
                 .name("nonexistentPartitionName")
                 .hostList(nodeListTwoNodes)
@@ -147,26 +140,25 @@ public class SlurmQueueProviderTest {
         final CommandResult sinfoResult = CommandResult.builder()
                 .stdOut(validStdoutUpdatedPartition)
                 .stdErr(Collections.emptyList())
-                .exitCode(0).build();
+                .build();
         doReturn(SINFO_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
                 Mockito.matches(SINFO_COMMAND_TEMPLATE), Mockito.any());
         doReturn(sinfoResult).when(mockCmdExecutor).execute(SINFO_COMMAND_PATTERN);
 
         final CommandResult updateCommandResult = CommandResult.builder()
                 .stdErr(Collections.emptyList())
-                .exitCode(0)
                 .build();
         doReturn(UPDATE_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
                 Mockito.matches(SCONTROL_COMMAND_TEMPLATE), Mockito.any());
         doReturn(updateCommandResult).when(mockCmdExecutor).execute(UPDATE_COMMAND_PATTERN);
 
         final QueueVO updateRequest = QueueVO.builder()
-                .name("updatingPartition")
+                .name(UPDATING_PARTITION_NAME)
                 .hostList(nodeListOneNode)
                 .allowedUserGroups(groupsList)
                 .build();
         final Queue createdPartitionEntity = Queue.builder()
-                .name("updatingPartition")
+                .name(UPDATING_PARTITION_NAME)
                 .allowedUserGroups(groupsList)
                 .hostList(nodeListOneNode)
                 .slots(new SlotsDescription(2, slotDescriptionOneNode))
@@ -180,10 +172,8 @@ public class SlurmQueueProviderTest {
         final CommandResult listResult = CommandResult.builder()
                 .stdOut(validListOut)
                 .stdErr(Collections.emptyList())
-                .exitCode(0).build();
-        doReturn(LIST_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
-                Mockito.matches(SINFO_COMMAND_TEMPLATE), Mockito.any());
-        doReturn(listResult).when(mockCmdExecutor).execute(LIST_COMMAND_PATTERN);
+                .build();
+        doReturn(listResult).when(mockCmdExecutor).execute(Mockito.any());
 
         final List<Queue> partitionsName = List.of(
                 Queue.builder()
@@ -204,14 +194,12 @@ public class SlurmQueueProviderTest {
         final CommandResult listResult = CommandResult.builder()
                 .stdOut(validStdout)
                 .stdErr(Collections.emptyList())
-                .exitCode(0).build();
-        doReturn(LIST_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
-                Mockito.matches(SINFO_COMMAND_TEMPLATE), Mockito.any());
-        doReturn(listResult).when(mockCmdExecutor).execute(LIST_COMMAND_PATTERN);
+                .build();
+        doReturn(listResult).when(mockCmdExecutor).execute(Mockito.any());
 
         final List<Queue> filtredPartition =
                 List.of(Queue.builder()
-                        .name("newPartition")
+                        .name(NEW_PARTITION_NAME)
                         .hostList(nodeListOneNode)
                         .slots(new SlotsDescription(1,
                                 slotDescriptionOneNode))
@@ -226,15 +214,13 @@ public class SlurmQueueProviderTest {
     public void deletePartitionNotFound() {
         final CommandResult deletionFailedResult = CommandResult.builder()
                 .stdOut(Collections.emptyList())
-                .stdErr(List.of("delete_partition PartitionName=deletedPartiiton: Invalid partition name "
+                .stdErr(List.of("delete_partition PartitionName=deletedPartition: Invalid partition name "
                         + "specified"))
-                .exitCode(0).build();
-        doReturn(DELETE_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
-                Mockito.matches(SCONTROL_COMMAND_TEMPLATE), Mockito.any());
-        doReturn(deletionFailedResult).when(mockCmdExecutor).execute(DELETE_COMMAND_PATTERN);
+                .build();
+        doReturn(deletionFailedResult).when(mockCmdExecutor).execute(Mockito.any());
 
         final QueueVO incorrectDeletionData = QueueVO.builder()
-                .name("deletedPartiiton")
+                .name(DELETED_PARTITION_NAME)
                 .build();
         final GridEngineException gridExceptionUpdate = Assertions.assertThrows(GridEngineException.class,
                 () -> slurmQueueProvider.updateQueue(incorrectDeletionData));
@@ -245,28 +231,25 @@ public class SlurmQueueProviderTest {
     public void deletePartitionSuccessful() {
         final CommandResult deletePartitionResult = CommandResult.builder()
                 .stdErr(Collections.emptyList())
-                .exitCode(0)
                 .build();
 
-        doReturn(DELETE_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
-                Mockito.matches(SCONTROL_COMMAND_TEMPLATE), Mockito.any());
-        doReturn(deletePartitionResult).when(mockCmdExecutor).execute(DELETE_COMMAND_PATTERN);
+        doReturn(deletePartitionResult).when(mockCmdExecutor).execute(Mockito.any());
 
         final Queue deletedPartition = Queue.builder()
-                .name("deletedPartiiton")
+                .name(DELETED_PARTITION_NAME)
                 .build();
-        final Queue deletedPartitionResult = slurmQueueProvider.deleteQueues("deletedPartiiton");
+        final Queue deletedPartitionResult = slurmQueueProvider.deleteQueues(DELETED_PARTITION_NAME);
         Assertions.assertEquals(deletedPartition, deletedPartitionResult);
     }
 
     static Stream<Arguments> incorrectDataForPartitionCreateAndUpdate() {
         return Stream.of(
                 Arguments.of(QueueVO.builder()
-                        .name("newPartition")
+                        .name(NEW_PARTITION_NAME)
                         .ownerList(ownerList)
                         .build()),
                 Arguments.of(QueueVO.builder()
-                        .name("newPartition")
+                        .name(NEW_PARTITION_NAME)
                         .parallelEnvironmentNames(parallelEnvList)
                         .build()),
                 Arguments.of(QueueVO.builder()
