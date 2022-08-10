@@ -124,7 +124,7 @@ public class SlurmQueueProvider implements QueueProvider {
 
         final String updateName = updateRequest.getName();
         final List<String> updateHostList = updateRequest.getHostList();
-        final List<String> updateUserGroups = updateRequest.getAllowedUserGroups();
+        final List<String> updateUserGroups = sortList(updateRequest.getAllowedUserGroups());
         if (!StringUtils.hasText(updateName) || CollectionUtils.isEmpty(updateHostList)
                 || CollectionUtils.isEmpty(updateUserGroups)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Name, hostList and allowedUserGroups should be "
@@ -143,7 +143,6 @@ public class SlurmQueueProvider implements QueueProvider {
         final int cpus = partitionData.getCpus();
 
         final List<String> updateHostListDecrypted = decryptGroupOfNodes(updateHostList);
-        sortList(updateUserGroups);
 
         if (updateHostListDecrypted.equals(currentNodesDecrypted) && updateUserGroups.equals(userGroups)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "New partition properties and the current one are "
@@ -204,8 +203,10 @@ public class SlurmQueueProvider implements QueueProvider {
                 .build();
     }
 
-    private void sortList(final List<String> list) {
-        list.sort(String::compareTo);
+    private List<String> sortList(final List<String> list) {
+        return CollectionUtils.isEmpty(list)
+                ? list
+                : list.stream().sorted().collect(Collectors.toList());
     }
 
     private List<String> decryptGroupOfNodes(final List<String> hostList) {
@@ -219,8 +220,7 @@ public class SlurmQueueProvider implements QueueProvider {
                         decryptedNodes.add(host.trim());
                     }
                 });
-        sortList(decryptedNodes);
-        return decryptedNodes;
+        return sortList(decryptedNodes);
     }
 
     private void checkIsResultIsCorrect(final CommandResult result) {

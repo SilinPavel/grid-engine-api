@@ -21,7 +21,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Collections;
 import java.util.stream.Stream;
@@ -37,7 +36,7 @@ public class SlurmQueueProviderTest {
             "partition2|worker2|1|slurm");
     private static final List<String> validStdoutUpdatedPartition = List.of("updatingPartitionName|worker1,worker2|"
             + "2|ALL");
-    private static final List<String> validStdoutPartitionOneNOde = List.of("updatingPartitionName|worker1|2|ALL");
+    private static final List<String> validStdoutPartitionOneNode = List.of("updatingPartitionName|worker1|2|ALL");
     private static final String[] UPDATE_COMMAND_PATTERN = new String[]{"scontrol UPDATE "
             + "PartitionName=updatingPartitionName AllowGroups=ALL Nodes=worker1,worker2"};
     private static final String[] SINFO_COMMAND_PATTERN = new String[]{"sinfo --partition=updatingPartitionName "
@@ -50,8 +49,8 @@ public class SlurmQueueProviderTest {
     private static final List<String> ownerList = List.of("root", "slurm");
     private static final List<String> parallelEnvList = List.of("someVar1", "someVar1");
     private static final List<String> nodeListOneNode = List.of("worker1");
-    private static final List<String> nodeListTwoNodes = new ArrayList<>(List.of("worker1", "worker2"));
-    private static final List<String> groupsList = new ArrayList<>(List.of("ALL"));
+    private static final List<String> nodeListTwoNodes = List.of("worker1", "worker2");
+    private static final List<String> groupsList = List.of("ALL");
 
     private final Map<String, Integer> slotDescriptionOneNode = Map.of("worker1", 1);
     private final Map<String, Integer> slotDescriptionTwoNodes = Map.of("worker1", 1,"worker2", 1);
@@ -156,7 +155,7 @@ public class SlurmQueueProviderTest {
     @Test
     public void updatePartitionSuccessful() {
         final CommandResult sinfoResult = CommandResult.builder()
-                .stdOut(validStdoutPartitionOneNOde)
+                .stdOut(validStdoutPartitionOneNode)
                 .stdErr(Collections.emptyList())
                 .build();
         doReturn(SINFO_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
