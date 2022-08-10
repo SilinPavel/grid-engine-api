@@ -37,7 +37,7 @@ public class SlurmQueueProviderTest {
             "partition2|worker2|1|slurm");
     private static final List<String> validStdoutUpdatedPartition = List.of("updatingPartitionName|worker1,worker2|"
             + "2|ALL");
-
+    private static final List<String> validStdoutPartitionOneNOde = List.of("updatingPartitionName|worker1|2|ALL");
     private static final String[] UPDATE_COMMAND_PATTERN = new String[]{"scontrol UPDATE "
             + "PartitionName=updatingPartitionName AllowGroups=ALL Nodes=worker1,worker2"};
     private static final String[] SINFO_COMMAND_PATTERN = new String[]{"sinfo --partition=updatingPartitionName "
@@ -54,6 +54,7 @@ public class SlurmQueueProviderTest {
     private static final List<String> groupsList = new ArrayList<>(List.of("ALL"));
 
     private final Map<String, Integer> slotDescriptionOneNode = Map.of("worker1", 1);
+    private final Map<String, Integer> slotDescriptionTwoNodes = Map.of("worker1", 1,"worker2", 1);
 
     @Autowired
     private SlurmQueueProvider slurmQueueProvider;
@@ -74,6 +75,23 @@ public class SlurmQueueProviderTest {
         final GridEngineException gridExceptionUpdate = Assertions.assertThrows(GridEngineException.class,
                 () -> slurmQueueProvider.updateQueue(incorrectRequest));
         Assertions.assertNotNull(gridExceptionUpdate.getMessage());
+    }
+
+    static Stream<Arguments> incorrectDataForPartitionCreateAndUpdate() {
+        return Stream.of(
+                Arguments.of(QueueVO.builder()
+                        .name(NEW_PARTITION_NAME)
+                        .ownerList(ownerList)
+                        .build()),
+                Arguments.of(QueueVO.builder()
+                        .name(NEW_PARTITION_NAME)
+                        .parallelEnvironmentNames(parallelEnvList)
+                        .build()),
+                Arguments.of(QueueVO.builder()
+                        .allowedUserGroups(groupsList)
+                        .hostList(nodeListTwoNodes)
+                        .build())
+        );
     }
 
     @Test
@@ -138,7 +156,7 @@ public class SlurmQueueProviderTest {
     @Test
     public void updatePartitionSuccessful() {
         final CommandResult sinfoResult = CommandResult.builder()
-                .stdOut(validStdoutUpdatedPartition)
+                .stdOut(validStdoutPartitionOneNOde)
                 .stdErr(Collections.emptyList())
                 .build();
         doReturn(SINFO_COMMAND_PATTERN).when(mockCommandCompiler).compileCommand(Mockito.eq(CommandType.SLURM),
@@ -154,14 +172,14 @@ public class SlurmQueueProviderTest {
 
         final QueueVO updateRequest = QueueVO.builder()
                 .name(UPDATING_PARTITION_NAME)
-                .hostList(nodeListOneNode)
+                .hostList(nodeListTwoNodes)
                 .allowedUserGroups(groupsList)
                 .build();
         final Queue createdPartitionEntity = Queue.builder()
                 .name(UPDATING_PARTITION_NAME)
                 .allowedUserGroups(groupsList)
-                .hostList(nodeListOneNode)
-                .slots(new SlotsDescription(2, slotDescriptionOneNode))
+                .hostList(nodeListTwoNodes)
+                .slots(new SlotsDescription(2, slotDescriptionTwoNodes))
                 .build();
         final Queue updatingPartition = slurmQueueProvider.updateQueue(updateRequest);
         Assertions.assertEquals(createdPartitionEntity, updatingPartition);
@@ -240,23 +258,6 @@ public class SlurmQueueProviderTest {
                 .build();
         final Queue deletedPartitionResult = slurmQueueProvider.deleteQueues(DELETED_PARTITION_NAME);
         Assertions.assertEquals(deletedPartition, deletedPartitionResult);
-    }
-
-    static Stream<Arguments> incorrectDataForPartitionCreateAndUpdate() {
-        return Stream.of(
-                Arguments.of(QueueVO.builder()
-                        .name(NEW_PARTITION_NAME)
-                        .ownerList(ownerList)
-                        .build()),
-                Arguments.of(QueueVO.builder()
-                        .name(NEW_PARTITION_NAME)
-                        .parallelEnvironmentNames(parallelEnvList)
-                        .build()),
-                Arguments.of(QueueVO.builder()
-                        .allowedUserGroups(groupsList)
-                        .hostList(nodeListTwoNodes)
-                        .build())
-        );
     }
 
 }
