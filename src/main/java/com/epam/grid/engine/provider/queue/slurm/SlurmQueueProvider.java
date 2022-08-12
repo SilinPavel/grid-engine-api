@@ -29,10 +29,12 @@ import com.epam.grid.engine.entity.queue.Queue;
 import com.epam.grid.engine.entity.queue.QueueVO;
 import com.epam.grid.engine.entity.queue.SlotsDescription;
 import com.epam.grid.engine.exception.GridEngineException;
+import com.epam.grid.engine.mapper.queue.slurm.SlurmQueueMapper;
 import com.epam.grid.engine.provider.queue.QueueProvider;
 import com.epam.grid.engine.provider.utils.CommandsUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -40,15 +42,15 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.epam.grid.engine.utils.TextConstants.COMMA;
 
@@ -72,10 +74,8 @@ public class SlurmQueueProvider implements QueueProvider {
     private static final String SCONTROL_HOSTS = "hostList";
     private static final String SCONTROL_PARTITION_NAME = "partitionName";
     private static final String STANDARD_SLURM_DELIMETER = "\\|";
-    private static final String LEFT_SQUARE_BRACKET_SIGN = "\\[";
-    private static final String HYPHEN_SIGN = "-";
 
-    private static final Pattern NODES_RANGE_REGEX = Pattern.compile("[a-zA-Z]+\\[\\d+-\\d+]");
+    private static final Pattern NODES_RANGE_REGEX = Pattern.compile("([a-zA-Z]+)\\[(\\d+)-(\\d+)]");
     private static final int SCONTROL_OUPUT_SIZE = 4;
     private static final int SCONTROL_OUPUT_PARTNAME_INDEX = 0;
     private static final int SCONTROL_OUPUT_NODES_INDEX = 1;
@@ -84,6 +84,7 @@ public class SlurmQueueProvider implements QueueProvider {
     private static final int CPUS_PER_NODE_BY_DEFAULT = 1;
 
     private final SimpleCmdExecutor simpleCmdExecutor;
+    private final SlurmQueueMapper queueMapper;
 
     /**
      * An object that forms the structure of an executable command according to a template.
@@ -107,7 +108,7 @@ public class SlurmQueueProvider implements QueueProvider {
         final CommandResult result = simpleCmdExecutor.execute(commandCompiler.compileCommand(getProviderType(),
                 SCONTROL_COMMAND, context));
         checkIsResultIsCorrect(result);
-        final List<String> decryptedRegisterNodes = decryptGroupOfNodes(registrationRequest.getHostList());
+        final List<String> decryptedRegisterNodes = parseGroupOfNodes(registrationRequest.getHostList());
         final Map<String, Integer> slotDescription = getNodesDescription(decryptedRegisterNodes,
                 CPUS_PER_NODE_BY_DEFAULT);
         return Queue.builder()
@@ -124,7 +125,8 @@ public class SlurmQueueProvider implements QueueProvider {
 
         final String updateName = updateRequest.getName();
         final List<String> updateHostList = updateRequest.getHostList();
-        final List<String> updateUserGroups = sortList(updateRequest.getAllowedUserGroups());
+        final List<String> updateUserGroups = updateRequest.getAllowedUserGroups();
+        Collections.sort(updateUserGroups);
         if (!StringUtils.hasText(updateName) || CollectionUtils.isEmpty(updateHostList)
                 || CollectionUtils.isEmpty(updateUserGroups)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Name, hostList and allowedUserGroups should be "
@@ -142,7 +144,7 @@ public class SlurmQueueProvider implements QueueProvider {
         final List<String> userGroups = partitionData.getGroups();
         final int cpus = partitionData.getCpus();
 
-        final List<String> updateHostListDecrypted = decryptGroupOfNodes(updateHostList);
+        final List<String> updateHostListDecrypted = parseGroupOfNodes(updateHostList);
 
         if (updateHostListDecrypted.equals(currentNodesDecrypted) && updateUserGroups.equals(userGroups)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "New partition properties and the current one are "
@@ -203,24 +205,10 @@ public class SlurmQueueProvider implements QueueProvider {
                 .build();
     }
 
-    private List<String> sortList(final List<String> list) {
-        return CollectionUtils.isEmpty(list)
-                ? list
-                : list.stream().sorted().collect(Collectors.toList());
-    }
-
-    private List<String> decryptGroupOfNodes(final List<String> hostList) {
-        final List<String> decryptedNodes = new ArrayList<>();
-        hostList
-                .forEach(host -> {
-                    final Matcher matcher = NODES_RANGE_REGEX.matcher(host);
-                    if (matcher.find()) {
-                        decryptedNodes.addAll(expandHosts(host));
-                    } else {
-                        decryptedNodes.add(host.trim());
-                    }
-                });
-        return sortList(decryptedNodes);
+    private List<String> parseGroupOfNodes(final List<String> hostList) {
+        return hostList.stream()
+                .flatMap(this::mapHostRangeToHosts)
+                .collect(Collectors.toList());
     }
 
     private void checkIsResultIsCorrect(final CommandResult result) {
@@ -257,27 +245,17 @@ public class SlurmQueueProvider implements QueueProvider {
                     + SCONTROL_OUPUT_SIZE + " fields, but " + nodeDataArray.length + " were fetched.");
         }
 
-        final List<String> nodeList = new ArrayList<>();
-        final String nodeListString = nodeDataArray[SCONTROL_OUPUT_NODES_INDEX];
-        if (!nodeListString.isEmpty()) {
-            if (nodeListString.contains(COMMA)) {
-                nodeList.addAll(decryptGroupOfNodes(Arrays.asList(nodeListString.split(COMMA))));
-            } else {
-                nodeList.addAll(decryptGroupOfNodes(List.of(nodeListString)));
-            }
-        }
+        final List<String> nodeList = parseGroupOfNodes(
+                Arrays.stream(nodeDataArray[SCONTROL_OUPUT_NODES_INDEX].split(COMMA))
+                        .filter(StringUtils::hasText)
+                        .collect(Collectors.toList())
+        );
 
         final int cpusPerNode = Integer.parseInt(nodeDataArray[SCONTROL_OUPUT_CPUS_INDEX]);
 
-        final List<String> userGroups = new ArrayList<>();
-        final String userListString = nodeDataArray[SCONTROL_OUPUT_USERGROUPS_INDEX];
-        if (!userListString.isEmpty()) {
-            if (userListString.contains(COMMA)) {
-                userGroups.addAll(Arrays.asList(userListString.split(COMMA)));
-            } else {
-                userGroups.add(userListString);
-            }
-        }
+        final List<String> userGroups = Arrays.stream(nodeDataArray[SCONTROL_OUPUT_USERGROUPS_INDEX].split(COMMA))
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
 
         return SlurmQueue.builder()
                 .partition(nodeDataArray[SCONTROL_OUPUT_PARTNAME_INDEX])
@@ -288,7 +266,7 @@ public class SlurmQueueProvider implements QueueProvider {
     }
 
     private List<Queue> fillQueueNameFromOutput(final List<String> resultOutput) {
-        return resultOutput.stream()
+        return ListUtils.emptyIfNull(resultOutput).stream()
                 .map(partitionData -> {
                     final String[] partitionDataArray = partitionData.split(STANDARD_SLURM_DELIMETER);
                     if (partitionDataArray.length != SCONTROL_OUPUT_SIZE) {
@@ -304,27 +282,13 @@ public class SlurmQueueProvider implements QueueProvider {
     }
 
     private List<Queue> fillQueueData(final List<String> resultOutput) {
-        final List<SlurmQueue> partitionsData = resultOutput.stream()
+        return ListUtils.emptyIfNull(resultOutput).stream()
                 .map(this::getPartitionData)
-                .collect(Collectors.toList());
-
-        return partitionsData.stream().map(
-                        partitionData -> Queue.builder()
-                                .name(partitionData.getPartition())
-                                .hostList(partitionData.getNodelist())
-                                .allowedUserGroups(partitionData.getGroups())
-                                .slots(new SlotsDescription(
-                                        partitionData.getCpus() * partitionData.getNodelist().size(),
-                                        getNodesDescription(partitionData.getNodelist(), partitionData.getCpus())
-                                ))
-                                .build())
+                .map(queueMapper::slurmQueueToQueue)
                 .collect(Collectors.toList());
     }
 
     private Map<String, Integer> getNodesDescription(final List<String> nodes, final int cpus) {
-        if (nodes.isEmpty()) {
-            return new HashMap<>();
-        }
         return nodes.stream()
                 .collect(Collectors.toMap(
                         nodeListElem -> nodeListElem,
@@ -345,14 +309,18 @@ public class SlurmQueueProvider implements QueueProvider {
         return context;
     }
 
-    private List<String> expandHosts(final String hosts) {
-        final String[] hostsArray = hosts.split(LEFT_SQUARE_BRACKET_SIGN);
-        final String hostName = hostsArray[0];
-        final String[] rangeArray = hostsArray[1].split(HYPHEN_SIGN);
-        final int fromInt = Integer.parseInt(rangeArray[0]);
-        final int toInt = Integer.parseInt(rangeArray[1].substring(0, rangeArray[1].length() - 1));
-        return IntStream.rangeClosed(fromInt, toInt)
-                .mapToObj(hostNumber -> hostName.concat(String.valueOf(hostNumber))).collect(Collectors.toList());
+    private Stream<String> mapHostRangeToHosts(final String hosts) {
+        final Matcher matcher = NODES_RANGE_REGEX.matcher(hosts);
+        if (matcher.find()) {
+            final String hostName = matcher.group(1);
+            final int fromInt = Integer.parseInt(matcher.group(2));
+            final int toInt = Integer.parseInt(matcher.group(3));
+            return IntStream.rangeClosed(fromInt, toInt)
+                    .mapToObj(hostNumber -> hostName.concat(String.valueOf(hostNumber)));
+        } else {
+            return Stream.of(hosts.trim());
+        }
+
     }
 
     private void checkRegistrationRequest(final QueueVO registrationRequest) {

@@ -53,7 +53,7 @@ public class SlurmQueueProviderTest {
     private static final List<String> groupsList = List.of("ALL");
 
     private final Map<String, Integer> slotDescriptionOneNode = Map.of("worker1", 1);
-    private final Map<String, Integer> slotDescriptionTwoNodes = Map.of("worker1", 1,"worker2", 1);
+    private final Map<String, Integer> slotDescriptionTwoNodes = Map.of("worker1", 1, "worker2", 1);
 
     @Autowired
     private SlurmQueueProvider slurmQueueProvider;
