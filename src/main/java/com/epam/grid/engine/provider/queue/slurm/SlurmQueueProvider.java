@@ -44,7 +44,6 @@ import org.thymeleaf.context.Context;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Collections;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -125,8 +124,9 @@ public class SlurmQueueProvider implements QueueProvider {
 
         final String updateName = updateRequest.getName();
         final List<String> updateHostList = updateRequest.getHostList();
-        final List<String> updateUserGroups = updateRequest.getAllowedUserGroups();
-        Collections.sort(updateUserGroups);
+        final List<String> updateUserGroups = ListUtils.emptyIfNull(updateRequest.getAllowedUserGroups()).stream()
+                .sorted()
+                .collect(Collectors.toList());
         if (!StringUtils.hasText(updateName) || CollectionUtils.isEmpty(updateHostList)
                 || CollectionUtils.isEmpty(updateUserGroups)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "Name, hostList and allowedUserGroups should be "
