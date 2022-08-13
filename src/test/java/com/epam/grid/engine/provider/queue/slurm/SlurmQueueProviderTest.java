@@ -21,7 +21,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Collections;
 import java.util.stream.Stream;
@@ -33,7 +32,7 @@ import static org.mockito.Mockito.doReturn;
 public class SlurmQueueProviderTest {
 
     private static final List<String> validStdout = List.of("newPartition|worker1|1|ALL");
-    private static final List<String> validListOut = List.of("normal|worker1|1|ALL", "partition1||worker[21-2]|admin",
+    private static final List<String> validListOut = List.of("normal|worker1|1|ALL", "partition1||worker[1-2]|admin",
             "partition2|worker2|1|slurm");
     private static final List<String> validStdoutUpdatedPartition = List.of("updatingPartitionName|worker1,worker2|"
             + "2|ALL");

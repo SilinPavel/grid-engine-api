@@ -22,6 +22,7 @@ package com.epam.grid.engine.mapper.queue.slurm;
 import com.epam.grid.engine.entity.queue.Queue;
 import com.epam.grid.engine.entity.queue.SlotsDescription;
 import com.epam.grid.engine.entity.queue.slurm.SlurmQueue;
+import org.apache.commons.collections4.ListUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -55,9 +56,9 @@ public interface SlurmQueueMapper {
         queue.setSlots(mapSlurmSlotsToSlots(slurmQueue.getNodelist(), slurmQueue.getCpus()));
     }
 
-    default SlotsDescription mapSlurmSlotsToSlots(final List<String> nodeList, final int cpus) {
+    static SlotsDescription mapSlurmSlotsToSlots(final List<String> nodeList, final int cpus) {
         final SlotsDescription slotsDescription = new SlotsDescription();
-        final Map<String, Integer> slots = nodeList.stream()
+        final Map<String, Integer> slots = ListUtils.emptyIfNull(nodeList).stream()
                 .collect(Collectors.toMap(
                         nodeListElem -> nodeListElem,
                         nodeListElem -> cpus)

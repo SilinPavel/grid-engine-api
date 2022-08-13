@@ -43,7 +43,6 @@ import org.springframework.util.StringUtils;
 import org.thymeleaf.context.Context;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -107,14 +106,14 @@ public class SlurmQueueProvider implements QueueProvider {
         final CommandResult result = simpleCmdExecutor.execute(commandCompiler.compileCommand(getProviderType(),
                 SCONTROL_COMMAND, context));
         checkIsResultIsCorrect(result);
-        final List<String> decryptedRegisterNodes = parseGroupOfNodes(registrationRequest.getHostList());
-        final Map<String, Integer> slotDescription = getNodesDescription(decryptedRegisterNodes,
+        final List<String> parsedRegisterNodes = parseGroupOfNodes(registrationRequest.getHostList());
+        final SlotsDescription slotDescription = SlurmQueueMapper.mapSlurmSlotsToSlots(parsedRegisterNodes,
                 CPUS_PER_NODE_BY_DEFAULT);
         return Queue.builder()
                 .name(registrationRequest.getName())
-                .hostList(decryptedRegisterNodes)
+                .hostList(parsedRegisterNodes)
                 .allowedUserGroups(registrationRequest.getAllowedUserGroups())
-                .slots(new SlotsDescription(decryptedRegisterNodes.size(), slotDescription))
+                .slots(slotDescription)
                 .build();
     }
 
@@ -140,30 +139,26 @@ public class SlurmQueueProvider implements QueueProvider {
 
         final SlurmQueue partitionData = getPartitionData(sinfoResult.getStdOut().get(0));
 
-        final List<String> currentNodesDecrypted = partitionData.getNodelist();
+        final List<String> currentNodesParsed = partitionData.getNodelist();
         final List<String> userGroups = partitionData.getGroups();
-        final int cpus = partitionData.getCpus();
 
-        final List<String> updateHostListDecrypted = parseGroupOfNodes(updateHostList);
+        final List<String> updateHostListParsed = parseGroupOfNodes(updateHostList);
 
-        if (updateHostListDecrypted.equals(currentNodesDecrypted) && updateUserGroups.equals(userGroups)) {
+        if (updateHostListParsed.equals(currentNodesParsed) && updateUserGroups.equals(userGroups)) {
             throw new GridEngineException(HttpStatus.BAD_REQUEST, "New partition properties and the current one are "
                     + "equal");
         }
-        fillContextWithDataToUpdate(context, updateUserGroups, updateHostListDecrypted);
+        fillContextWithDataToUpdate(context, updateUserGroups, updateHostListParsed);
 
         final CommandResult result = simpleCmdExecutor.execute(commandCompiler.compileCommand(getProviderType(),
                 SCONTROL_COMMAND, context));
         checkIsResultIsCorrect(result);
 
-        final Map<String, Integer> slotDescription = getNodesDescription(updateHostListDecrypted,
-                CPUS_PER_NODE_BY_DEFAULT);
-
         return Queue.builder()
                 .name(updateName)
-                .hostList(updateHostListDecrypted)
+                .hostList(updateHostListParsed)
                 .allowedUserGroups(updateUserGroups)
-                .slots(new SlotsDescription(cpus, slotDescription))
+                .slots(SlurmQueueMapper.mapSlurmSlotsToSlots(updateHostListParsed, CPUS_PER_NODE_BY_DEFAULT))
                 .build();
     }
 
@@ -286,14 +281,6 @@ public class SlurmQueueProvider implements QueueProvider {
                 .map(this::getPartitionData)
                 .map(queueMapper::slurmQueueToQueue)
                 .collect(Collectors.toList());
-    }
-
-    private Map<String, Integer> getNodesDescription(final List<String> nodes, final int cpus) {
-        return nodes.stream()
-                .collect(Collectors.toMap(
-                        nodeListElem -> nodeListElem,
-                        nodeListElem -> cpus)
-                );
     }
 
     private Context prepareContext(final QueueVO registrationRequest) {
